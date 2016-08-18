@@ -1,0 +1,10 @@
+label
+to_lower
+neighbours_1
+neighbours_2
+is_capitalised
+2d
+4d
+suffix_2
+suffix_3
+conditional_prev_1
