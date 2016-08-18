@@ -131,19 +131,21 @@ class feature_extractor:
         return result
 
     def ft_is_capitalised(self, *params):
-        token = param[0]
+        token = params[0]
         return token[0].isupper()
 
     def ft_get_2d(self, *params):
-        token = param[0]
+        token = params[0]
         return len(token) == 2 and token.isdigit()
 
     def ft_get_4d(self, *params):
-        token = param[0]
+        token = params[0]
         return len(token) == 4 and token.isdigit()
 
     def ft_get_suffix_2(self, *params):
+        token = params[0]
         return "suffix_2="+token[:-2]
 
     def ft_get_suffix_3(self, *params):
+        token = params[0]
         return "suffix_3="+token[:-3]
