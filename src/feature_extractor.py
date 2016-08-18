@@ -132,7 +132,8 @@ class feature_extractor:
 
     def ft_is_capitalised(self, *params):
         token = params[0]
-        return "is_upper="+token[0].isupper()
+        print(token)
+        return "is_upper="+str(token[:1].isupper())
 
     def ft_get_2d(self, *params):
         token = params[0]
