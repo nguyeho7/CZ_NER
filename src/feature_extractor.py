@@ -127,20 +127,22 @@ class feature_extractor:
         if i > 1:
             result+=("w[-2]="+get_label(tokens[i-2]))
         if i < end-1:
-            result+=("w[1]="+get_label(tokens[i+2]))
+            result+=("w[2]="+get_label(tokens[i+2]))
         return result
 
     def ft_is_capitalised(self, *params):
         token = params[0]
-        return token[0].isupper()
+        return "is_upper="+token[0].isupper()
 
     def ft_get_2d(self, *params):
         token = params[0]
-        return len(token) == 2 and token.isdigit()
+        is_digit =  len(token) == 2 and token.isdigit()
+        return "2_number="+ is_digit
 
     def ft_get_4d(self, *params):
         token = params[0]
-        return len(token) == 4 and token.isdigit()
+        is_digit =  len(token) == 4 and token.isdigit()
+        return "4_number="+ is_digit
 
     def ft_get_suffix_2(self, *params):
         token = params[0]
