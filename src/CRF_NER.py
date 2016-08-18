@@ -2,10 +2,17 @@
 from NER_utils import transform_dataset 
 from NER_utils import load_dataset
 import pycrfsuite
+import sys 
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.metrics import f1_score, classification_report
 
+"""
+Usage: python CRF_NER.py named_ent_dtest.txt named_ent_etest.txt model.txt 
+"""
 def global_eval(ypred, ytrue):
+    """
+    measures macro f1 score for the classification
+    """
     merged_ypred = [item for sublist in ypred for item in sublist]
     merged_ytrue = [item for sublist in ytrue for item in sublist]
     binarizer = LabelBinarizer() # makes one vs all matrices for labels
@@ -16,6 +23,9 @@ def global_eval(ypred, ytrue):
     return f1_score(y_true_bin, y_pred_bin, labels=[cl_indices[tag] for tag in tags],average='macro')
 
 def per_token_eval(ypred, ytrue):
+    """
+    measures per-token precision, ignoring the not_named_entity tag
+    """
     merged_ypred = [item for sublist in ypred for item in sublist]
     merged_ytrue = [item for sublist in ytrue for item in sublist]
     binarizer = LabelBinarizer() 
@@ -51,9 +61,9 @@ def parse_commands(filename):
 
 
 def main():
-    train_filename = "named_ent_train.txt"
-    models = parse_commands('models.txt') 
-    test_filename = "named_ent_etest.txt"
+    train_filename = sys.argv[1]
+    test_filename = sys.argv[2]
+    models = parse_commands(sys.argv[3]) 
     tr_raw = load_dataset(train_filename)
     te_raw = load_dataset(test_filename)
     for model, params in models:
