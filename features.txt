@@ -8,3 +8,4 @@ is_capitalised
 suffix_2
 suffix_3
 conditional_prev_1
+get_type
