@@ -89,8 +89,8 @@ class feature_extractor:
                      '4d': self.ft_get_4d,
                      'suffix_2': self.ft_get_suffix_2,
                      'suffix_3': self.ft_get_suffix_3,
-                     'conditional_prev_1': ft_conditional_prev_1,
-                     'get_type': ft_get_type}
+                     'conditional_prev_1': self.ft_conditional_prev_1,
+                     'get_type': self.ft_get_type}
         self.functions = [function_dict[param] for param in params] # functions to use
 
     def extract_features(self, tokens):
