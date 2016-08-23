@@ -88,7 +88,9 @@ class feature_extractor:
                      '2d': self.ft_get_2d,
                      '4d': self.ft_get_4d,
                      'suffix_2': self.ft_get_suffix_2,
-                     'suffix_3': self.ft_get_suffix_3}
+                     'suffix_3': self.ft_get_suffix_3,
+                     'conditional_prev_1': ft_conditional_prev_1,
+                     'get_type': ft_get_type}
         self.functions = [function_dict[param] for param in params] # functions to use
 
     def extract_features(self, tokens):
@@ -152,3 +154,27 @@ class feature_extractor:
     def ft_get_suffix_3(self, *params):
         token = params[0]
         return "suffix_3="+token[:-3]
+
+    def ft_conditional_prev_1(self, *params):
+        token, i, tokens = params
+        if i==0:
+            return token+"|START"
+        else:
+            return token+"|"+tokens[i-1]
+
+    def ft_get_type(self, *params):
+        token = params[0]
+        output = ""
+        for ch in token:
+            if ch.isalpha():
+                if ch.isupper():
+                    k="A"
+                else:
+                    k="a"
+            elif ch.isdigit():
+                k="N"
+            elif not ch.isalnum():
+                k="."
+            if not output.endswith(k):
+                output += k
+        return output
