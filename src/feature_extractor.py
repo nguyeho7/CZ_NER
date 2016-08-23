@@ -90,8 +90,21 @@ class feature_extractor:
                      'suffix_2': self.ft_get_suffix_2,
                      'suffix_3': self.ft_get_suffix_3,
                      'conditional_prev_1': self.ft_conditional_prev_1,
-                     'get_type': self.ft_get_type}
-        self.functions = [function_dict[param] for param in params] # functions to use
+                     'get_type': self.ft_get_type,
+                     'addr_gzttr': self.ft_addr_gzttr
+                     'name_gzttr': self.ft_name_gzttr}
+        external_functs = {'addr_gzttr', 'name_gzttr'}
+        self.functions = []
+        function = True
+        for param in params:
+            if function:
+                self.functions.append(function_dict[param])
+            else:
+                self.functions[-1](param,init=True)
+                function = True
+            if param in external_functs:
+                function = False
+        print("i will use following feature functions:", self.functions)
 
     def extract_features(self, tokens):
         result = []
@@ -178,3 +191,33 @@ class feature_extractor:
             if not output.endswith(k):
                 output += k
         return "type="+output
+    
+    def ft_name_gzttr(self, *params, init=False):
+        if init:
+            self._load_name_gzttr(params[0])
+            return
+        token = params[0]
+        flag = token in self.name_gzttr
+        return "name="+str(flag)
+
+    def _load_name_gzttr(self, filename):
+        self.name_gzttr =  set()
+        with open(filename) as f:
+            for l in f:
+                self.name_gzttr.add(l)
+
+    def ft_addr_gzttr(self, *params, init=False):
+        if init:
+            self._load_addr_gzttr(params[0])
+            return
+        token = params[0]
+        flag = token in self.addr_gzttr
+        return "address="+str(flag)
+
+    def _load_addr_gzttr(self, filename):
+        self.addr_gzttr =  set()
+        with open(filename) as f:
+            for l in f:
+                self.addr_gzttr.add(l)
+
+
