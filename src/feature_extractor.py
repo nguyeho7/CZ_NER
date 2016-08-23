@@ -109,7 +109,7 @@ class feature_extractor:
 
     def ft_to_lower(self, *params):
         token = params[0]
-        return "lower="+token.tolower()
+        return "lower="+token.lower()
 
     def ft_get_neighbours_1(self, *params):
         assert len(params) == 3
