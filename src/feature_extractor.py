@@ -177,4 +177,4 @@ class feature_extractor:
                 k="."
             if not output.endswith(k):
                 output += k
-        return output
+        return "type="+output
