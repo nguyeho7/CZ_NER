@@ -87,7 +87,7 @@ class feature_extractor:
                      'is_capitalised': self.ft_is_capitalised,
                      'next' :self.ft_get_next,
                      'prev' :self.ft_get_prev,
-                     'POS_curr': self.ft_POS_curr,
+                     'POS_curr_json': self.ft_POS_curr,
                      'POS_prev': self.ft_POS_prev,
                      'POS_next': self.ft_POS_next,
                      'POS_cond': self.ft_POS_cond,
@@ -203,8 +203,9 @@ class feature_extractor:
                 output += k
         return "type="+output
 
-    def _get_POS(self, params):
+    def _get_POS(self, params, init):
         """
+        for use with production server
         Note this function needs the whole sentence
         """
         token, i, tokens = params
@@ -215,27 +216,27 @@ class feature_extractor:
         tags = [x.split('\t') for x in r.text.strip().split('\n')]
         self.POS_tags = defaultdict(lambda: "none")
         self.POS_tags.update({tag[1] : tag[3] for tag in tags})
-        
-    def ft_POS_curr(self, *params):
+                
+    def ft_POS_curr(self, *params, init=False):
         if not self.POS_tags:
-            self._get_POS(params)
+            self._get_POS(params, init)
         token = params[0]
         if token not in self.POS_tags:
             print(token)
         return "POS[0]="+self.POS_tags[token]
 
-    def ft_POS_prev(self,*params):
+    def ft_POS_prev(self,*params, init=False):
         if not self.POS_tags:
-            self._get_POS(params)
+            self._get_POS(params, init)
         token,i,tokens = params
         if i > 0:
-            result+= "POS[-1]="+self.POS_tags[tokens[i-1]]
+            return "POS[-1]="+self.POS_tags[tokens[i-1]]
         else:
             return "POS[-1]=START"
 
-    def ft_POS_next(self,*params):
+    def ft_POS_next(self,*params, init=False):
         if not self.POS_tags:
-            self._get_POS(params)
+            self._get_POS(params, init)
         token,i,tokens = params
         end = len(tokens)-1
         if i < end:
@@ -243,12 +244,12 @@ class feature_extractor:
         else:
             return "POS[1]=END"
 
-    def ft_POS_cond(self, *param):
+    def ft_POS_cond(self, *param, init=False):
         if not self.POS_tags:
-            self._get_POS(params)
+            self._get_POS(params, init)
         token,i,tokens = params
         if i > 0:
-            result= "POS[-1]|POS[0]="+self.POS_tags[tokens[i-1]]+"|"+self.POS_tags[token]
+            return "POS[-1]|POS[0]="+self.POS_tags[tokens[i-1]]+"|"+self.POS_tags[token]
         else:
             return "POS[-1]|POS[0]="+self.POS_tags[tokens[i-1]] + "|START" 
 

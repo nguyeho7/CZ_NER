@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from feature_extractor import *
 import string
+import json
 
 """
 Set of utils to transform the CNEC2.0 dataset into a format usable by pythoncrfsuite
@@ -105,6 +106,26 @@ def get_NE_tag(token):
     while token[end] != ' ' and token[end] != '<':
         end+=1
     return token[start:end]
+
+def dump_POS_tags(dataset,filename):
+    with open(filename, 'w') as f:
+        f.write('"pos:"{')
+        ft = feature_extractor(['label', 'POS_curr_json'])
+        for i, line in enumerate(dataset):
+            tokens = expand_NE_tokens(line_split(line))
+            POS_tags = ft.extract_features(tokens)
+            tag_dict = {p[0]: p[1] for p in POS_tags}
+            tokens_no_tags = [get_label(x) for x in tokens]
+            sentence = " ".join(tokens_no_tags)
+            f.write("\"")
+            f.write(sentence)
+            f.write("\"")
+            f.write(":")
+            f.write(json.dumps(tag_dict, ensure_ascii=False))
+            if i < len(dataset)-1:
+                f.write(',\n')
+        f.write("}")
+            
 
 def transform_dataset(dataset, params):
     '''

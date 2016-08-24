@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 from NER_utils import transform_dataset 
+from NER_utils import dump_POS_tags
 from NER_utils import load_dataset
 import pycrfsuite
 import sys 
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.metrics import f1_score, classification_report
+from collections import Counter
 
 """
 Usage: python CRF_NER.py named_ent_dtest.txt named_ent_etest.txt model.txt 
@@ -21,6 +23,28 @@ def global_eval(ypred, ytrue):
     tags = [tag for tag in binarizer.classes_]
     cl_indices = {cls: idx for idx, cls in enumerate(binarizer.classes_)}
     return f1_score(y_true_bin, y_pred_bin, labels=[cl_indices[tag] for tag in tags],average='macro')
+
+def global_eval2(ypred, ytrue):
+    merged_ypred = [item for sublist in ypred for item in sublist]
+    merged_ytrue = [item for sublist in ytrue for item in sublist]
+    tags = set(merged_ytrue)
+    correct_per_tag_pred = Counter()
+    incorrect_per_tag_pred = Counter()
+    correct_per_tag_true = Counter()
+    incorrect_per_tag_true = Counter()
+    incorrect = 0
+    correct = 0
+    for yp, yt in zip(merged_ypred, merged_ytrue):
+        if yp == yt:
+            correct += 1
+            correct_per_tag_pred[yp] += 1
+            correct_per_tag_true[yt] += 1
+        else:
+            incorrect += 1
+            incorrect_per_tag_pred[yp] += 1
+            incorrect_per_tag_true[yt] += 1
+    precision = correct/incorrect
+    per_tag_prec_pred = [(tag, cor_per_tag_pred[tag]/incor_per_tag_pred) for tag in            tags]
 
 def per_token_eval(ypred, ytrue):
     """
@@ -67,18 +91,21 @@ def main():
     tr_raw = load_dataset(train_filename)
     te_raw = load_dataset(test_filename)
     for model, params in models:
-        trainer = pycrfsuite.Trainer(verbose=False)
-        tr_label, tr_feature = transform_dataset(tr_raw, params)
-        te_label, te_feature = transform_dataset(te_raw, params) 
-        for lab, feat in zip(tr_label, tr_feature):
-            trainer.append(feat, lab)
-        trainer.train(model+'.crfmodel')
-        tagger = pycrfsuite.Tagger()
-        tagger.open(model+'.crfmodel')
-        predictions = [tagger.tag(sentence) for sentence in te_feature]
-        per_class_prec = per_token_eval(predictions, te_label)
-        f1_score = global_eval(predictions, te_label)
-        output_evalutation(per_class_prec, f1_score, model)
+#        trainer = pycrfsuite.Trainer(verbose=False)
+        #tr_label, tr_feature = transform_dataset(tr_raw, params)
+        #te_label, te_feature = transform_dataset(te_raw, params) 
+         dump_POS_tags(tr_raw, "train_POS.json")
+         dump_POS_tags(te_raw, "test_POS.json")
+       # print(tr_feature[0])
+ #       for lab, feat in zip(tr_label, tr_feature):
+  #          trainer.append(feat, lab)
+   #     trainer.train(model+'.crfmodel')
+    #    tagger = pycrfsuite.Tagger()
+     #   tagger.open(model+'.crfmodel')
+      #  predictions = [tagger.tag(sentence) for sentence in te_feature]
+      #  per_class_prec = per_token_eval(predictions, te_label)
+       # f1_score = global_eval(predictions, te_label)
+        #output_evalutation(per_class_prec, f1_score, model)
 
 
 if __name__ == '__main__':
