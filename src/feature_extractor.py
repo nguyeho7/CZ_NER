@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import requests
+from collections import defaultdict
 
 def is_NE(token):
     if len(token) < 1:
@@ -80,25 +82,28 @@ class feature_extractor:
     '''
 
     def __init__(self, params):
-        function_dict = {'label' : self.ft_get_label, 
+        self.function_dict = {'label' : self.ft_get_label, 
                      'to_lower': self.ft_to_lower,
-                     'neighbours_1': self.ft_get_neighbours_1,
-                     'neighbours_2': self.ft_get_neighbours_2,
                      'is_capitalised': self.ft_is_capitalised,
-                     '2d': self.ft_get_2d,
-                     '4d': self.ft_get_4d,
+                     'next' :self.ft_get_next,
+                     'prev' :self.ft_get_prev,
+                     'POS_curr': self.ft_POS_curr,
+                     'POS_prev': self.ft_POS_prev,
+                     'POS_next': self.ft_POS_next,
+                     'POS_cond': self.ft_POS_cond,
                      'suffix_2': self.ft_get_suffix_2,
                      'suffix_3': self.ft_get_suffix_3,
                      'conditional_prev_1': self.ft_conditional_prev_1,
                      'get_type': self.ft_get_type,
-                     'addr_gzttr': self.ft_addr_gzttr
+                     'addr_gzttr': self.ft_addr_gzttr,
                      'name_gzttr': self.ft_name_gzttr}
         external_functs = {'addr_gzttr', 'name_gzttr'}
         self.functions = []
+        self.POS_tags = {}
         function = True
         for param in params:
             if function:
-                self.functions.append(function_dict[param])
+                self.functions.append(self.function_dict[param])
             else:
                 self.functions[-1](param,init=True)
                 function = True
@@ -114,6 +119,7 @@ class feature_extractor:
             for ft_func in self.functions:
                 features.append(ft_func(token, i, tokens_no_tags))
             result.append(features)
+        self.POS_tags={}
         return result 
 
     def ft_get_label(self, *params):
@@ -124,41 +130,46 @@ class feature_extractor:
         token = params[0]
         return "lower="+token.lower()
 
-    def ft_get_neighbours_1(self, *params):
-        assert len(params) == 3
+    def ft_get_prev(self, *params):
         token,i,tokens = params
         end = len(tokens)-1
-        result = ""
         if i > 0:
-            result+=("w[-1]="+get_label(tokens[i-1]))
-        if i < end:
-            result+=("w[1]="+get_label(tokens[i+1]))
+            result=("w[-1]="+get_label(tokens[i-1]))
+        else:
+            result="w[-1]=START"
         return result
 
-    def ft_get_neighbours_2(self, *params):
+    def ft_get_next(self, *params):
         token,i,tokens = params
         end = len(tokens)-1
-        result = ""
-        if i > 1:
-            result+=("w[-2]="+get_label(tokens[i-2]))
+        if i < end:
+            result="w[1]="+get_label(tokens[i+1])
+        else:
+            result="w[1]=END" 
+        return result
+
+    def ft_get_next_2(self, *params):
+        token,i,tokens = params
+        end = len(tokens)-1
         if i < end-1:
             result+=("w[2]="+get_label(tokens[i+2]))
+        else:
+            result="w[2]=END"
+        return result
+
+    def ft_get_prev_2(self, *params):
+        token,i,tokens = params
+        end = len(tokens)-1
+        if i > 1:
+            result=("w[-2]="+get_label(tokens[i-2]))
+        else:
+            result="w[-2]=START"
         return result
 
     def ft_is_capitalised(self, *params):
         token = params[0]
         print(token)
         return "is_upper="+str(token[:1].isupper())
-
-    def ft_get_2d(self, *params):
-        token = params[0]
-        is_digit =  len(token) == 2 and token.isdigit()
-        return "2_number="+ is_digit
-
-    def ft_get_4d(self, *params):
-        token = params[0]
-        is_digit =  len(token) == 4 and token.isdigit()
-        return "4_number="+ is_digit
 
     def ft_get_suffix_2(self, *params):
         token = params[0]
@@ -191,7 +202,56 @@ class feature_extractor:
             if not output.endswith(k):
                 output += k
         return "type="+output
-    
+
+    def _get_POS(self, params):
+        """
+        Note this function needs the whole sentence
+        """
+        token, i, tokens = params
+        url='http://cloud.ailao.eu:13880/czech_parser' 
+        sentence = " ".join(tokens)
+        print(sentence)
+        r = requests.post(url, data=sentence.encode('utf-8'))
+        tags = [x.split('\t') for x in r.text.strip().split('\n')]
+        self.POS_tags = defaultdict(lambda: "none")
+        self.POS_tags.update({tag[1] : tag[3] for tag in tags})
+        
+    def ft_POS_curr(self, *params):
+        if not self.POS_tags:
+            self._get_POS(params)
+        token = params[0]
+        if token not in self.POS_tags:
+            print(token)
+        return "POS[0]="+self.POS_tags[token]
+
+    def ft_POS_prev(self,*params):
+        if not self.POS_tags:
+            self._get_POS(params)
+        token,i,tokens = params
+        if i > 0:
+            result+= "POS[-1]="+self.POS_tags[tokens[i-1]]
+        else:
+            return "POS[-1]=START"
+
+    def ft_POS_next(self,*params):
+        if not self.POS_tags:
+            self._get_POS(params)
+        token,i,tokens = params
+        end = len(tokens)-1
+        if i < end:
+            return "POS[1]="+self.POS_tags[tokens[i+1]]
+        else:
+            return "POS[1]=END"
+
+    def ft_POS_cond(self, *param):
+        if not self.POS_tags:
+            self._get_POS(params)
+        token,i,tokens = params
+        if i > 0:
+            result= "POS[-1]|POS[0]="+self.POS_tags[tokens[i-1]]+"|"+self.POS_tags[token]
+        else:
+            return "POS[-1]|POS[0]="+self.POS_tags[tokens[i-1]] + "|START" 
+
     def ft_name_gzttr(self, *params, init=False):
         if init:
             self._load_name_gzttr(params[0])
