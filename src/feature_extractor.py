@@ -203,7 +203,7 @@ class feature_extractor:
                 output += k
         return "type="+output
 
-    def _get_POS(self, params, init):
+    def _get_POS(self,init, params):
         """
         for use with production server
         Note this function needs the whole sentence
@@ -217,26 +217,26 @@ class feature_extractor:
         self.POS_tags = defaultdict(lambda: "none")
         self.POS_tags.update({tag[1] : tag[3] for tag in tags})
                 
-    def ft_POS_curr(self, *params, init=False):
+    def ft_POS_curr(self, init=False, *params):
         if not self.POS_tags:
-            self._get_POS(params, init)
+            self._get_POS(init, params)
         token = params[0]
         if token not in self.POS_tags:
             print(token)
         return "POS[0]="+self.POS_tags[token]
 
-    def ft_POS_prev(self,*params, init=False):
+    def ft_POS_prev(self,init=False, *params):
         if not self.POS_tags:
-            self._get_POS(params, init)
+            self._get_POS(init, params)
         token,i,tokens = params
         if i > 0:
             return "POS[-1]="+self.POS_tags[tokens[i-1]]
         else:
             return "POS[-1]=START"
 
-    def ft_POS_next(self,*params, init=False):
+    def ft_POS_next(self, init=False, *params):
         if not self.POS_tags:
-            self._get_POS(params, init)
+            self._get_POS(init, params)
         token,i,tokens = params
         end = len(tokens)-1
         if i < end:
@@ -244,16 +244,16 @@ class feature_extractor:
         else:
             return "POS[1]=END"
 
-    def ft_POS_cond(self, *param, init=False):
+    def ft_POS_cond(self, init=False, *param):
         if not self.POS_tags:
-            self._get_POS(params, init)
+            self._get_POS(init, params)
         token,i,tokens = params
         if i > 0:
             return "POS[-1]|POS[0]="+self.POS_tags[tokens[i-1]]+"|"+self.POS_tags[token]
         else:
             return "POS[-1]|POS[0]="+self.POS_tags[tokens[i-1]] + "|START" 
 
-    def ft_name_gzttr(self, *params, init=False):
+    def ft_name_gzttr(self, init=False, *params):
         if init:
             self._load_name_gzttr(params[0])
             return
@@ -267,7 +267,7 @@ class feature_extractor:
             for l in f:
                 self.name_gzttr.add(l)
 
-    def ft_addr_gzttr(self, *params, init=False):
+    def ft_addr_gzttr(self,init=False, *params):
         if init:
             self._load_addr_gzttr(params[0])
             return
