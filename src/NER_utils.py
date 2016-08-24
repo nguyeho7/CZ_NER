@@ -53,7 +53,7 @@ def expand_NE_tokens(tokens):
             output.append(token)
         else:
             tag = get_NE_tag(token)
-            labels = expand_embedded_NE(get_label(token))
+            labels = expand_NE(get_label(token))
             for i,label in enumerate(labels):
                 if i == 0:
                     output.append('<{}_b {}>'.format(tag, label))
