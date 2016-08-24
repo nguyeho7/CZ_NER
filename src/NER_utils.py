@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 from feature_extractor import *
-"""
-Set of utils to transform the CNEC2.0 dataset into a format usable by CRFSuite
-extract_features should be extendable by further features
-"""
 import string
-exclude = set('!"#$%&\'()*+,-./:;=?@[\\]^_`{|}~')
+
+"""
+Set of utils to transform the CNEC2.0 dataset into a format usable by pythoncrfsuite
+"""
 
 def load_dataset(filename="named_ent_dtest.txt"):
     '''
@@ -37,6 +36,60 @@ def line_split(line):
             yield line[current+1:i]
             current = i
 
+def expand_NE_tokens(tokens):
+    '''
+    Goes through all tokens from line_split and either adds them outright
+    or expands them, removing the inner tags and instead appending
+    outertag_b for first, outertag_i for inner and outertag_b for last word 
+    <P<pf Václavu> <ps Klausovi>> turns into:
+    ['<P_b Václavu>', '<P_e Klausovi>']
+    here we use the tag P instead of pf/ps
+    will be hard to compare performance like this
+    returns list of tokens with NE tokens expanded
+    '''
+    output = []
+    for token in tokens:
+        if not is_NE(token):
+            output.append(token)
+        else:
+            tag = get_NE_tag(token)
+            labels = expand_embedded_NE(get_label(token))
+            for i,label in enumerate(labels):
+                if i == 0:
+                    output.append('<{}_b {}>'.format(tag, label))
+                elif i<len(labels)-1:
+                    output.append('<{}_i {}>'.format(tag, label))
+                elif len(labels) != 1:
+                    output.append('<{}_e {}>'.format(tag, label))
+    return output
+
+
+def expand_NE(token):
+    '''
+    returns a flattened list of NE labels, i.e.
+    you have <gc Velké Británii>, you call get_label and get
+    Velké Británii
+    then you call expand_NE and you get:
+    ['Velke', 'Britanii']
+    for 'TOPIC , s . r . o . it returns:
+    ['TOPIC', 's.r.o.']
+    returns: list containing the parts of NE
+    '''
+    output = []
+    token_list = token.split(' ')
+    for i, x in enumerate(token_list):
+        if x == '':
+            continue
+        if x != '.':
+            if i > 1:
+                if token[i-1] == '.' and not x[0].isupper():
+                    output[-1]+=x
+                    continue       
+            output.append(x)  
+        elif x == '.':
+            output[-1] += x
+    return output
+
 def get_tags(tokens):
     return [get_tag(token) for token in tokens]
 
@@ -61,7 +114,7 @@ def transform_dataset(dataset, params):
     labels = []
     ft = feature_extractor(params)
     for line in dataset:
-        tokens = list(line_split(line))
+        tokens = expand_NE(line_split(line))
         labels.append(get_tags(tokens))
         features_list.append(ft.extract_features(tokens))
     return labels, features_list
@@ -79,15 +132,3 @@ def dump_dataset(labels, features, filename):
             out.write('\t')
             out.write(s)
             out.write('\n')
-"""
-def main():
-    import sys
-    input_filename = sys.argv[1]
-    output_filename = sys.argv[2]
-    data_raw = load_dataset(input_filename)
-    data_ft = transform_dataset(data_raw)
-    dump_dataset(data_ft[0], data_ft[1], output_filename)
-
-if __name__ == '__main__':
-    main()
-"""
