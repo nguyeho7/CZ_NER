@@ -114,7 +114,7 @@ def transform_dataset(dataset, params):
     labels = []
     ft = feature_extractor(params)
     for line in dataset:
-        tokens = expand_NE(line_split(line))
+        tokens = expand_NE_tokens(line_split(line))
         labels.append(get_tags(tokens))
         features_list.append(ft.extract_features(tokens))
     return labels, features_list
