@@ -110,17 +110,15 @@ def get_NE_tag(token):
 
 def dump_POS_tags(dataset,filename):
     with open(filename, 'w') as f:
-        f.write('"pos:"{')
+        f.write('{')
         ft = feature_extractor(['label', 'POS_curr_json'])
         for i, line in enumerate(dataset):
             tokens = expand_NE_tokens(line_split(line))
             POS_tags = ft.extract_features(tokens)
-            tag_dict = {p[0]: p[1] for p in POS_tags}
+            tag_dict = {p[0][5:]: p[1][7:] for p in POS_tags}
             tokens_no_tags = [get_label(x) for x in tokens]
             sentence = " ".join(tokens_no_tags)
-            f.write("\"")
-            f.write(sentence)
-            f.write("\"")
+            f.write(json.dumps(sentence))
             f.write(":")
             f.write(json.dumps(tag_dict, ensure_ascii=False))
             if i < len(dataset)-1:
