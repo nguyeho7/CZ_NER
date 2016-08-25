@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 from feature_extractor import *
 import string
 import json
@@ -118,7 +117,7 @@ def dump_POS_tags(dataset,filename):
             tag_dict = {p[0][5:]: p[1][7:] for p in POS_tags}
             tokens_no_tags = [get_label(x) for x in tokens]
             sentence = " ".join(tokens_no_tags)
-            f.write(json.dumps(sentence))
+            f.write(json.dumps(sentence, ensure_ascii=False))
             f.write(":")
             f.write(json.dumps(tag_dict, ensure_ascii=False))
             if i < len(dataset)-1:
