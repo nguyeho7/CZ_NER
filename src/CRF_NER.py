@@ -91,21 +91,20 @@ def main():
     tr_raw = load_dataset(train_filename)
     te_raw = load_dataset(test_filename)
     for model, params in models:
-#        trainer = pycrfsuite.Trainer(verbose=False)
-        #tr_label, tr_feature = transform_dataset(tr_raw, params)
-        #te_label, te_feature = transform_dataset(te_raw, params) 
-         dump_POS_tags(tr_raw, "train_POS.json")
-         dump_POS_tags(te_raw, "test_POS.json")
-       # print(tr_feature[0])
- #       for lab, feat in zip(tr_label, tr_feature):
-  #          trainer.append(feat, lab)
-   #     trainer.train(model+'.crfmodel')
-    #    tagger = pycrfsuite.Tagger()
-     #   tagger.open(model+'.crfmodel')
-      #  predictions = [tagger.tag(sentence) for sentence in te_feature]
-      #  per_class_prec = per_token_eval(predictions, te_label)
-       # f1_score = global_eval(predictions, te_label)
-        #output_evalutation(per_class_prec, f1_score, model)
+        trainer = pycrfsuite.Trainer(verbose=False)
+        tr_label, tr_feature = transform_dataset(tr_raw, params)
+        te_label, te_feature = transform_dataset(te_raw, params) 
+        dump_POS_tags(tr_raw, "train_POS.json")
+        dump_POS_tags(te_raw, "test_POS.json")
+        for lab, feat in zip(tr_label, tr_feature):
+            trainer.append(feat, lab)
+        trainer.train(model+'.crfmodel')
+        tagger = pycrfsuite.Tagger()
+        tagger.open(model+'.crfmodel')
+        predictions = [tagger.tag(sentence) for sentence in te_feature]
+        per_class_prec = per_token_eval(predictions, te_label)
+        f1_score = global_eval(predictions, te_label)
+        output_evalutation(per_class_prec, f1_score, model)
 
 
 if __name__ == '__main__':
