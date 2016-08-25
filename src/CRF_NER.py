@@ -94,8 +94,6 @@ def main():
         trainer = pycrfsuite.Trainer(verbose=False)
         tr_label, tr_feature = transform_dataset(tr_raw, params)
         te_label, te_feature = transform_dataset(te_raw, params) 
-        dump_POS_tags(tr_raw, "train_POS.json")
-        dump_POS_tags(te_raw, "test_POS.json")
         for lab, feat in zip(tr_label, tr_feature):
             trainer.append(feat, lab)
         trainer.train(model+'.crfmodel')
