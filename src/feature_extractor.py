@@ -105,9 +105,6 @@ class feature_extractor:
         self.functions = []
         function = True
         for param in params:
-            if param == 'all'
-                self.functions.extend(self.function_dict.values())
-                break
             if function:
                 self.functions.append(self.function_dict[param])
             else:
