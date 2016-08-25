@@ -203,7 +203,7 @@ class feature_extractor:
                 output += k
         return "type="+output
 
-    def _get_POS(self,init, params):
+    def _get_POS(self, *params, init):
         """
         for use with production server
         Note this function needs the whole sentence
@@ -217,7 +217,7 @@ class feature_extractor:
         self.POS_tags = defaultdict(lambda: "none")
         self.POS_tags.update({tag[1] : tag[3] for tag in tags})
                 
-    def ft_POS_curr(self, init=False, *params):
+    def ft_POS_curr(self, *params, init=False):
         if not self.POS_tags:
             self._get_POS(init, params)
         token = params[0]
@@ -225,7 +225,7 @@ class feature_extractor:
             print(token)
         return "POS[0]="+self.POS_tags[token]
 
-    def ft_POS_prev(self,init=False, *params):
+    def ft_POS_prev(self, *params,init=False):
         if not self.POS_tags:
             self._get_POS(init, params)
         token,i,tokens = params
@@ -234,7 +234,7 @@ class feature_extractor:
         else:
             return "POS[-1]=START"
 
-    def ft_POS_next(self, init=False, *params):
+    def ft_POS_next(self, *params, init=False):
         if not self.POS_tags:
             self._get_POS(init, params)
         token,i,tokens = params
@@ -244,7 +244,7 @@ class feature_extractor:
         else:
             return "POS[1]=END"
 
-    def ft_POS_cond(self, init=False, *param):
+    def ft_POS_cond(self, *param, init=False):
         if not self.POS_tags:
             self._get_POS(init, params)
         token,i,tokens = params
@@ -253,7 +253,7 @@ class feature_extractor:
         else:
             return "POS[-1]|POS[0]="+self.POS_tags[tokens[i-1]] + "|START" 
 
-    def ft_name_gzttr(self, init=False, *params):
+    def ft_name_gzttr(self, *params, init=False):
         if init:
             self._load_name_gzttr(params[0])
             return
@@ -267,7 +267,7 @@ class feature_extractor:
             for l in f:
                 self.name_gzttr.add(l)
 
-    def ft_addr_gzttr(self,init=False, *params):
+    def ft_addr_gzttr(self, *params,init=False):
         if init:
             self._load_addr_gzttr(params[0])
             return
