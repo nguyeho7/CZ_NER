@@ -203,7 +203,7 @@ class feature_extractor:
                 output += k
         return "type="+output
 
-    def _get_POS(self, *params, init):
+    def _get_POS(self, *params):
         """
         for use with production server
         Note this function needs the whole sentence
@@ -219,7 +219,7 @@ class feature_extractor:
                 
     def ft_POS_curr(self, *params, init=False):
         if not self.POS_tags:
-            self._get_POS(params, init)
+            self._get_POS(params)
         token = params[0]
         if token not in self.POS_tags:
             print(token)
@@ -227,7 +227,7 @@ class feature_extractor:
 
     def ft_POS_prev(self, *params,init=False):
         if not self.POS_tags:
-            self._get_POS(params, init)
+            self._get_POS(params)
         token,i,tokens = params
         if i > 0:
             return "POS[-1]="+self.POS_tags[tokens[i-1]]
@@ -236,7 +236,7 @@ class feature_extractor:
 
     def ft_POS_next(self, *params, init=False):
         if not self.POS_tags:
-            self._get_POS(params, init)
+            self._get_POS(params)
         token,i,tokens = params
         end = len(tokens)-1
         if i < end:
@@ -246,7 +246,7 @@ class feature_extractor:
 
     def ft_POS_cond(self, *param, init=False):
         if not self.POS_tags:
-            self._get_POS(params, init)
+            self._get_POS(params)
         token,i,tokens = params
         if i > 0:
             return "POS[-1]|POS[0]="+self.POS_tags[tokens[i-1]]+"|"+self.POS_tags[token]
