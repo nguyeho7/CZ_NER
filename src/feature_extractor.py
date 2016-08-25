@@ -90,6 +90,7 @@ class feature_extractor:
                      'next_2':self.ft_get_next_2,
                      'prev_2':self.ft_get_prev_2,
                      'POS_curr': self.ft_POS_curr,
+                     'POS_curr_json': self.ft_POS_curr,
                      'POS_prev': self.ft_POS_prev,
                      'POS_next': self.ft_POS_next,
                      'POS_prev_2': self.ft_POS_prev_2,
