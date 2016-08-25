@@ -87,9 +87,13 @@ class feature_extractor:
                      'is_capitalised': self.ft_is_capitalised,
                      'next' :self.ft_get_next,
                      'prev' :self.ft_get_prev,
-                     'POS_curr_json': self.ft_POS_curr,
+                     'next_2':self.ft_get_next_2,
+                     'prev_2':self.ft_get_prev_2,
+                     'POS_curr': self.ft_POS_curr,
                      'POS_prev': self.ft_POS_prev,
                      'POS_next': self.ft_POS_next,
+                     'POS_prev_2': self.ft_POS_prev_2,
+                     'POS_next_2': self.ft_POS_next_2,
                      'POS_cond': self.ft_POS_cond,
                      'suffix_2': self.ft_get_suffix_2,
                      'suffix_3': self.ft_get_suffix_3,
@@ -97,11 +101,13 @@ class feature_extractor:
                      'get_type': self.ft_get_type,
                      'addr_gzttr': self.ft_addr_gzttr,
                      'name_gzttr': self.ft_name_gzttr}
-        external_functs = {'addr_gzttr', 'name_gzttr'}
+        external_functs = {'addr_gzttr', 'name_gzttr', 'POS_curr'}
         self.functions = []
-        self.POS_tags = {}
         function = True
         for param in params:
+            if param == 'all'
+                self.functions.extend(self.function_dict.values())
+                break
             if function:
                 self.functions.append(self.function_dict[param])
             else:
@@ -134,37 +140,33 @@ class feature_extractor:
         token,i,tokens = params
         end = len(tokens)-1
         if i > 0:
-            result=("w[-1]="+get_label(tokens[i-1]))
+            return "w[-1]="+get_label(tokens[i-1])
         else:
-            result="w[-1]=START"
-        return result
+            return "w[-1]=START"
 
     def ft_get_next(self, *params):
         token,i,tokens = params
         end = len(tokens)-1
         if i < end:
-            result="w[1]="+get_label(tokens[i+1])
+            return "w[1]="+get_label(tokens[i+1])
         else:
-            result="w[1]=END" 
-        return result
+            return"w[1]=END" 
 
     def ft_get_next_2(self, *params):
         token,i,tokens = params
         end = len(tokens)-1
         if i < end-1:
-            result+=("w[2]="+get_label(tokens[i+2]))
+            return "w[2]="+get_label(tokens[i+2])
         else:
-            result="w[2]=END"
-        return result
+            return "w[2]=END"
 
     def ft_get_prev_2(self, *params):
         token,i,tokens = params
         end = len(tokens)-1
         if i > 1:
-            result=("w[-2]="+get_label(tokens[i-2]))
+            return "w[-2]="+get_label(tokens[i-2])
         else:
-            result="w[-2]=START"
-        return result
+            return "w[-2]=START"
 
     def ft_is_capitalised(self, *params):
         token = params[0]
@@ -203,7 +205,24 @@ class feature_extractor:
                 output += k
         return "type="+output
 
+
     def _get_POS(self, params):
+        """
+        get POS tag for given sentence, either from the loaded json
+        or online
+        """
+        token, i, tokens = params
+        sentence = " ".join(tokens)
+        if not self.POS_dict:
+            self._get_POS_online(params)
+        elif sentence not in self.POS_dict:
+            print('should not happen')
+            self._get_POS_online(params)
+        else:
+            self.POS_tags = defaultdict(lambda: "none")
+            self.POS_tags.update(self.POS_dict[sentence])
+
+    def _get_POS_online(self, params):
         """
         for use with production server
         Note this function needs the whole sentence
@@ -211,13 +230,22 @@ class feature_extractor:
         token, i, tokens = params
         url='http://cloud.ailao.eu:13880/czech_parser' 
         sentence = " ".join(tokens)
-        print(sentence)
         r = requests.post(url, data=sentence.encode('utf-8'))
         tags = [x.split('\t') for x in r.text.strip().split('\n')]
         self.POS_tags = defaultdict(lambda: "none")
         self.POS_tags.update({tag[1] : tag[3] for tag in tags})
-                
+
+    def _load_POS(self, filename):
+        with open(filename) as f:
+            if not self.POS_dict:
+                self.POS_dict = json.load(f.read())
+            else:
+                self.POS_dict.update(json.load(f.read()))
+
     def ft_POS_curr(self, *params, init=False):
+        if init:
+            self._load_POS(params[0])
+            return
         if not self.POS_tags:
             self._get_POS(params)
         token = params[0]
@@ -225,7 +253,7 @@ class feature_extractor:
             print(token)
         return "POS[0]="+self.POS_tags[token]
 
-    def ft_POS_prev(self, *params, init=False):
+    def ft_POS_prev(self, *params):
         if not self.POS_tags:
             self._get_POS(params)
         token,i,tokens = params
@@ -234,7 +262,7 @@ class feature_extractor:
         else:
             return "POS[-1]=START"
 
-    def ft_POS_next(self, *params, init=False):
+    def ft_POS_next(self, *params):
         if not self.POS_tags:
             self._get_POS(params)
         token,i,tokens = params
@@ -244,7 +272,26 @@ class feature_extractor:
         else:
             return "POS[1]=END"
 
-    def ft_POS_cond(self, *params, init=False):
+    def ft_POS_prev_2(self, *params):
+        if not self.POS_tags:
+            self._get_POS(params)
+        token,i,tokens = params
+        if i > 1:
+            return "POS[-2]="+self.POS_tags[tokens[i-2]]
+        else:
+            return "POS[-2]=START"
+
+    def ft_POS_next_2(self, *params):
+        if not self.POS_tags:
+            self._get_POS(params)
+        token,i,tokens = params
+        end = len(tokens)-1
+        if i < end-1:
+            return "POS[2]="+self.POS_tags[tokens[i+1]]
+        else:
+            return "POS[2]=END"
+
+    def ft_POS_cond(self, *params):
         if not self.POS_tags:
             self._get_POS(params)
         token,i,tokens = params
