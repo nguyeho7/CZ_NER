@@ -36,6 +36,10 @@ def line_split(line):
         if ch.isspace() and not in_tag:
             yield line[current+1:i]
             current = i
+        if i==len(line)-1:
+            yield line[current+1:i+1]
+            current = i
+
 
 def expand_NE_tokens(tokens):
     '''
@@ -54,7 +58,9 @@ def expand_NE_tokens(tokens):
             output.append(token)
         else:
             tag = get_NE_tag(token)
-            labels = expand_NE(get_label(token))
+            labels = []
+            for label in expand_NE(get_label(token)):
+                labels.extend(label.split(' '))
             for i,label in enumerate(labels):
                 if i == 0:
                     output.append('<{}_b {}>'.format(tag, label))
@@ -77,7 +83,7 @@ def expand_NE(token):
     returns: list containing the parts of NE
     '''
     output = []
-    token_list = token.split(' ')
+    token_list = token.strip().split(' ')
     for i, x in enumerate(token_list):
         if x == '':
             continue

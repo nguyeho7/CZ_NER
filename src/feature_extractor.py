@@ -41,8 +41,9 @@ def merge_NE_labels(token):
             flag = False
             in_tag = False
             curr_end = i
+            print(token[curr_begin:curr_end+1])
             result.append(get_label(token[curr_begin:curr_end+1])) 
-    return result
+    return [r.strip() for r in result]
     
 
 def get_NE_label(token):
@@ -297,6 +298,12 @@ class feature_extractor:
             return "POS[-1]|POS[0]="+self.POS_tags[tokens[i-1]]+"|"+self.POS_tags[token]
         else:
             return "POS[-1]|POS[0]="+self.POS_tags[tokens[i-1]] + "|START" 
+
+    def _load_clusters(self, filename):
+        with open(filename) as f:
+            for l in f:
+                l_split = l.split('\t')
+                self.clusters.update({l_split[1] : l_split[0]})
 
     def ft_name_gzttr(self, *params, init=False):
         if init:
