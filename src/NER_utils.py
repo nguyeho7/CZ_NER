@@ -14,12 +14,12 @@ def load_dataset(filename="named_ent_dtest.txt"):
     with open(filename) as f:
         return f.read().split('\n')
 
-def line_split(line):
+def line_split_old(line):
     '''
     a split according to space characters that considers tags in <> brackets as one word
     also works with embedded tags i.e. <s <ps kote>> will be one word
     '''
-    in_tag = False
+    in_tag = True
     embedded = False
     current = -1
     for i, ch in enumerate(line):
@@ -40,6 +40,25 @@ def line_split(line):
             yield line[current+1:i+1]
             current = i
 
+
+def line_split(line):
+    '''
+    a split according to space characters that considers tags in <> brackets as one word
+    also works with embedded tags i.e. <s <ps kote>> will be one word
+    '''
+    in_tag = 0
+    current = -1
+    for i, ch in enumerate(line):
+        if ch == '<':
+            in_tag += 1
+        elif ch == '>':
+            in_tag -= 1
+        if ch.isspace() and in_tag==0:
+            yield line[current+1:i]
+            current = i
+        if i==len(line)-1:
+            yield line[current+1:i+1]
+            current = i
 
 def expand_NE_tokens(tokens):
     '''

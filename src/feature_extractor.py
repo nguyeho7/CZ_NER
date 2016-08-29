@@ -10,53 +10,21 @@ def is_NE(token):
 def is_embedded(token):
     return token.count('>') > 1
 
-def merge_NE_labels(token):
-    '''
-    Returns a list consisting of the labels of embedded Named Entities
-
-    Deals with embedded <P<pf Friedrich> <ps Nietzsche>> and returns
-    ['Friedrich', 'Nietsche'] 
-    '''
-    curr_begin = 0
-    curr_end = 0
-    flag = False
-    first = True
-    result = []
-    in_tag = False
-    for i, ch in enumerate(token):
-        if ch.isspace() and first: #the first string before space is the tag
-            first = False
-        # sometimes there are words between embedded NE 
-        if ch.isspace() and not in_tag and not flag and not first:
-            curr_begin = i
-            flag = True
-            continue
-        if ch == '<':
-            if flag and curr_begin+1!=i:
-                result.append(get_NE_label(token[curr_begin+1:i]))
-                flag = False
-            in_tag = True
-            curr_begin = i
-        if ch == '>' and in_tag:
-            flag = False
-            in_tag = False
-            curr_end = i
-            print(token[curr_begin:curr_end+1])
-            result.append(get_label(token[curr_begin:curr_end+1])) 
-    return [r.strip() for r in result]
-    
-
 def get_NE_label(token):
     '''
     returns a list of the NE labels, i.e. <gt Asii> gives ['Asii']
     <P<pf Dubenka> <ps Kralova>> returns ['Dubenka', 'Kralova']
     works recursively on embedded NE labels as well
     '''
-    if not is_NE(token):
-        return token
-    if is_embedded(token):
-        return merge_NE_labels(token[1:-1])
-    return get_NE_label(token[1:-1].split(' ')[1:])
+    result = []
+    for ch in token.split(' '):
+        if '<' in ch:
+            continue
+        if '>' in ch:
+            result.append(ch.split('>')[0])
+        else:
+            result.append(ch)
+    return [r.strip() for r in result]
 
 def get_label(token):
     '''
