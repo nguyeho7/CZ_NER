@@ -68,11 +68,15 @@ class feature_extractor:
                      'suffix_2': self.ft_get_suffix_2,
                      'suffix_3': self.ft_get_suffix_3,
                      'conditional_prev_1': self.ft_conditional_prev_1,
+                     'clusters_8': self.ft_bclusters_8,
+                     'clusters_12': self.ft_bclusters_12,
+                     'clusters_16': self.ft_bclusters_16,
                      'get_type': self.ft_get_type,
                      'addr_gzttr': self.ft_addr_gzttr,
                      'name_gzttr': self.ft_name_gzttr}
-        external_functs = {'addr_gzttr', 'name_gzttr', 'POS_curr'}
+        external_functs = {'addr_gzttr', 'name_gzttr', 'POS_curr', 'clusters_8'}
         self.functions = []
+        self.clusters = defaultdict(lambda: -1)
         function = True
         for param in params:
             if function:
@@ -266,6 +270,20 @@ class feature_extractor:
             return "POS[-1]|POS[0]="+self.POS_tags[tokens[i-1]]+"|"+self.POS_tags[token]
         else:
             return "POS[-1]|POS[0]="+self.POS_tags[tokens[i-1]] + "|START" 
+
+    def ft_bclusters_8(self, *params, init=False):
+        if init:
+            self._load_clusters(params[0])
+        token = params[0]
+        return "BC_8="self.clusters[token.lower()][:8]
+
+    def ft_bclusters_12(self, *params):
+        token = params[0]
+        return "BC_12="self.clusters[token.lower()][:12]
+
+    def ft_bclusters_16(self, *params):
+        token = params[0]
+        return "BC_16="self.clusters[token.lower()][:16]
 
     def _load_clusters(self, filename):
         with open(filename) as f:
