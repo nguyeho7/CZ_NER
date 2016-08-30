@@ -76,7 +76,7 @@ class feature_extractor:
                      'name_gzttr': self.ft_name_gzttr}
         external_functs = {'addr_gzttr', 'name_gzttr', 'POS_curr', 'clusters_8'}
         self.functions = []
-        self.clusters = defaultdict(lambda: -1)
+        self.clusters = defaultdict(lambda:'-1')
         function = True
         for param in params:
             if function:
@@ -275,15 +275,15 @@ class feature_extractor:
         if init:
             self._load_clusters(params[0])
         token = params[0]
-        return "BC_8="self.clusters[token.lower()][:8]
+        return "BC_8="+self.clusters[token.lower()][:8]
 
     def ft_bclusters_12(self, *params):
         token = params[0]
-        return "BC_12="self.clusters[token.lower()][:12]
+        return "BC_12="+self.clusters[token.lower()][:12]
 
     def ft_bclusters_16(self, *params):
         token = params[0]
-        return "BC_16="self.clusters[token.lower()][:16]
+        return "BC_16="+self.clusters[token.lower()][:16]
 
     def _load_clusters(self, filename):
         with open(filename) as f:
