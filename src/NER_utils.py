@@ -148,7 +148,15 @@ def dump_POS_tags(dataset,filename):
             if i < len(dataset)-1:
                 f.write(',\n')
         f.write("}")
-            
+
+def merge_POS_tags(filename1, filename2, output_filename):
+    with open(filename1) as f:
+        merged_dict = json.load(f.read())
+    with open(filename2) as g:
+        merged_dict.update(json.load(g.read()))
+    with open(output_filename, 'w') as out:
+        out.write(json.dumps(merged_dict, ensure_ascii=False))
+
 
 def transform_dataset(dataset, params):
     '''
