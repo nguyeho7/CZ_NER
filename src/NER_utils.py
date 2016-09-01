@@ -85,8 +85,6 @@ def expand_NE_tokens(tokens):
                     output.append('<{}_b {}>'.format(tag, label))
                 elif i<len(labels)-1:
                     output.append('<{}_i {}>'.format(tag, label))
-                elif len(labels) != 1:
-                    output.append('<{}_e {}>'.format(tag, label))
     return output
 
 

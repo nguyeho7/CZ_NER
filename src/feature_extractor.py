@@ -30,8 +30,6 @@ def get_label(token):
     '''
     returns a label as string instead of list
     '''
-    if not is_NE(token):
-        return token
     return " ".join(get_NE_label(token))
 
 
