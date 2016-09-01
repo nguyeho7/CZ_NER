@@ -74,6 +74,8 @@ class feature_extractor:
                      'name_gzttr': self.ft_name_gzttr}
         external_functs = {'addr_gzttr', 'name_gzttr', 'POS_curr', 'clusters_8'}
         self.functions = []
+        self.POS_dict = {}
+        self.POS_tags = {}
         self.clusters = defaultdict(lambda:'-1')
         function = True
         for param in params:
