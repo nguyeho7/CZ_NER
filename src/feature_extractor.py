@@ -5,10 +5,7 @@ from collections import defaultdict
 def is_NE(token):
     if len(token) < 1:
         return False
-    return token[0]=='<' and token[-1] == '>'
-
-def is_embedded(token):
-    return token.count('>') > 1
+    return '<' in token and '>' in token 
 
 def get_NE_label(token):
     '''
@@ -90,8 +87,7 @@ class feature_extractor:
 
     def extract_features(self, tokens):
         result = []
-        tokens_no_tags = [get_label(x) for x in tokens]
-        for i, token in enumerate(tokens_no_tags):
+        for i, token in enumerate(tokens):
             features = []
             for ft_func in self.functions:
                 features.append(ft_func(token, i, tokens_no_tags))
