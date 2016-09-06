@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import requests
+import json
 from collections import defaultdict
 
 def is_NE(token):
@@ -195,7 +196,7 @@ class feature_extractor:
         Note this function needs the whole sentence
         """
         token, i, tokens = params
-        url='http://cloud.ailao.eu:13880/czech_parser' 
+        url='http://cloud.ailao.eu:4070/czech_parser' 
         sentence = " ".join(tokens)
         r = requests.post(url, data=sentence.encode('utf-8'))
         tags = [x.split('\t') for x in r.text.strip().split('\n')]
@@ -205,9 +206,9 @@ class feature_extractor:
     def _load_POS(self, filename):
         with open(filename) as f:
             if not self.POS_dict:
-                self.POS_dict = json.load(f.read())
+                self.POS_dict = json.loads(f.read())
             else:
-                self.POS_dict.update(json.load(f.read()))
+                self.POS_dict.update(json.loads(f.read()))
 
     def ft_POS_curr(self, *params, init=False):
         if init:
