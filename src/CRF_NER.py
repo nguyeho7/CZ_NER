@@ -13,60 +13,60 @@ Usage: python CRF_NER.py named_ent_dtest.txt named_ent_etest.txt model.txt
 """
 def global_eval(ypred, ytrue):
     """
-    measures macro f1 score for the classification
+    Measures micro averaged precision, recall, f1 and per-tag precision, recall, f1
+    returns precision, recall, f1 (floats), per_tag_prec, per_tag_rec, per_tag_f1 (dictionaries)
     """
-    merged_ypred = [item for sublist in ypred for item in sublist]
-    merged_ytrue = [item for sublist in ytrue for item in sublist]
-    binarizer = LabelBinarizer() # makes one vs all matrices for labels
-    y_true_bin = binarizer.fit_transform(merged_ytrue)
-    y_pred_bin = binarizer.transform(merged_ypred)
-    tags = [tag for tag in binarizer.classes_]
-    cl_indices = {cls: idx for idx, cls in enumerate(binarizer.classes_)}
-    return f1_score(y_true_bin, y_pred_bin, labels=[cl_indices[tag] for tag in tags],average='macro')
-
-def global_eval2(ypred, ytrue):
     merged_ypred = [item for sublist in ypred for item in sublist]
     merged_ytrue = [item for sublist in ytrue for item in sublist]
     tags = set(merged_ytrue)
-    correct_per_tag_pred = Counter()
-    incorrect_per_tag_pred = Counter()
-    correct_per_tag_true = Counter()
-    incorrect_per_tag_true = Counter()
-    incorrect = 0
-    correct = 0
+    true_positives = Counter()
+    false_positives = Counter()
+    false_negatives = Counter()
     for yp, yt in zip(merged_ypred, merged_ytrue):
         if yp == yt:
-            correct += 1
-            correct_per_tag_pred[yp] += 1
-            correct_per_tag_true[yt] += 1
+            true_positives[yt] += 1
         else:
-            incorrect += 1
-            incorrect_per_tag_pred[yp] += 1
-            incorrect_per_tag_true[yt] += 1
-    precision = correct/incorrect
-    per_tag_prec_pred = [(tag, cor_per_tag_pred[tag]/incor_per_tag_pred) for tag in            tags]
+            false_negatives[yt] += 1
+            false_positives[yp] += 1
+    total_tp = 0
+    total_fn = 0
+    total_fp = 0
+    for tag in tags:
+        total_tp += true_positives[tag]
+        total_fn += false_negatives[tag]
+        total_fp += false_positives[tag]
+    #micro measure
+    precision = total_tp/(total_tp + total_fp)
+    recall = total_tp/(total_tp + total_fn)
+    f1 = 2 * (precision * recall) / (precision + recall)
+    # per-tag measure
+    per_tag_pr = {}
+    per_tag_rec = {}
+    per_tag_f1 = {}
+    for tag in tags:
+        if true_positives[tag] + false_positives[tag] > 0:
+            per_tag_pr.update({tag: true_positives[tag]/(true_positives[tag] +
+                false_positives[tag])})
+        else:
+            per_tag_pr.update({tag: 0})
+        if (true_positives[tag] + false_negatives[tag]) > 0:
+            per_tag_rec.update({tag: true_positives[tag]/(true_positives[tag] +
+                false_negatives[tag])})
+        else:
+            per_tag_rec.update({tag:0})
+        per_tag_f1.update({tag: 2 * (per_tag_pr[tag] * per_tag_rec[tag]) /
+            (per_tag_pr[tag]+per_tag_rec[tag])})
+    return precision, recall, f1, per_tag_pr, per_tag_rec, per_tag_f1
 
-def per_token_eval(ypred, ytrue):
-    """
-    measures per-token precision, ignoring the not_named_entity tag
-    """
-    merged_ypred = [item for sublist in ypred for item in sublist]
-    merged_ytrue = [item for sublist in ytrue for item in sublist]
-    binarizer = LabelBinarizer() 
-    y_true_bin = binarizer.fit_transform(merged_ytrue)
-    y_pred_bin = binarizer.transform(merged_ypred)
-    tags = [tag for tag in binarizer.classes_ if tag != 'O']
-    cl_indices = {cls: idx for idx, cls in enumerate(binarizer.classes_)}
-    return classification_report(y_true_bin,
-                                 y_pred_bin,
-                                 labels=[cl_indices[tag] for tag in tags],
-                                 target_names=tags)
-
-def output_evalutation(classification_report, f1_score, model_name):
+def output_evalutation(precision, recall, f1, per_tag_pr, per_tag_rec, per_tag_f1, model_name):
     with open(model_name + '.log', 'w') as f:
-        f.write('F1 macro score: {}'.format(f1_score))
-        f.write('\n')
-        f.write(classification_report)
+        f.write('precision(micro): {}\n'.format(precision))
+        f.write('recall(micro): {}\n'.format(recall))
+        f.write('F1(micro): {}\n'.format(f1))
+        f.write('======per-tag-stats=====')
+        for pr,rec,f1 in zip(per_tag_pr.items(), per_tag_rec.items(), per_tag_f1.items():
+                f.write('tag:{} \t precision: {} \t recall: {} \t f1:
+                    {}\n'.format(pr[0],pr[1],rec[1],f1[1]))
         f.close()
 
 def parse_commands(filename):
@@ -100,10 +100,9 @@ def main():
         tagger = pycrfsuite.Tagger()
         tagger.open(model+'.crfmodel')
         predictions = [tagger.tag(sentence) for sentence in te_feature]
-        per_class_prec = per_token_eval(predictions, te_label)
-        f1_score = global_eval(predictions, te_label)
-        output_evalutation(per_class_prec, f1_score, model)
-
+        precision, recall, f1, per_tag_pr, per_tag_rec, per_tag_f1 = global_eval(predictions,
+                te_label) 
+        output_evaluation(precision, recall, f1, per_tag_pr, per_tag_rec, per_tag_f1, model)
 
 if __name__ == '__main__':
     main()
