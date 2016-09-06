@@ -91,7 +91,7 @@ class feature_extractor:
         for i, token in enumerate(tokens):
             features = []
             for ft_func in self.functions:
-                features.append(ft_func(token, i, tokens_no_tags))
+                features.append(ft_func(token, i, tokens))
             result.append(features)
         self.POS_tags={}
         return result 

@@ -54,19 +54,21 @@ def global_eval(ypred, ytrue):
                 false_negatives[tag])})
         else:
             per_tag_rec.update({tag:0})
-        per_tag_f1.update({tag: 2 * (per_tag_pr[tag] * per_tag_rec[tag]) /
+        if(per_tag_pr[tag] + per_tag_rec[tag] > 0):
+            per_tag_f1.update({tag: 2 * (per_tag_pr[tag] * per_tag_rec[tag]) /
             (per_tag_pr[tag]+per_tag_rec[tag])})
+        else:
+            per_tag_f1.update({tag: 0})
     return precision, recall, f1, per_tag_pr, per_tag_rec, per_tag_f1
 
-def output_evalutation(precision, recall, f1, per_tag_pr, per_tag_rec, per_tag_f1, model_name):
+def output_evaluation(precision, recall, f1, per_tag_pr, per_tag_rec, per_tag_f1, model_name):
     with open(model_name + '.log', 'w') as f:
         f.write('precision(micro): {}\n'.format(precision))
         f.write('recall(micro): {}\n'.format(recall))
         f.write('F1(micro): {}\n'.format(f1))
         f.write('======per-tag-stats=====')
-        for pr,rec,f1 in zip(per_tag_pr.items(), per_tag_rec.items(), per_tag_f1.items():
-                f.write('tag:{} \t precision: {} \t recall: {} \t f1:
-                    {}\n'.format(pr[0],pr[1],rec[1],f1[1]))
+        for pr,rec,f1 in zip(per_tag_pr.items(), per_tag_rec.items(), per_tag_f1.items()):
+                f.write('tag:{} \t precision: {} \t recall: {} \t f1: {}\n'.format(pr[0],pr[1],rec[1],f1[1]))
         f.close()
 
 def parse_commands(filename):
@@ -91,12 +93,12 @@ def main():
     tr_raw = load_dataset(train_filename)
     te_raw = load_dataset(test_filename)
     for model, params in models:
-        trainer = pycrfsuite.Trainer(verbose=False)
+ #       trainer = pycrfsuite.Trainer(verbose=False)
         tr_label, tr_feature = transform_dataset(tr_raw, params)
         te_label, te_feature = transform_dataset(te_raw, params) 
-        for lab, feat in zip(tr_label, tr_feature):
-            trainer.append(feat, lab)
-        trainer.train(model+'.crfmodel')
+#        for lab, feat in zip(tr_label, tr_feature):
+#            trainer.append(feat, lab)
+ #       trainer.train(model+'.crfmodel')
         tagger = pycrfsuite.Tagger()
         tagger.open(model+'.crfmodel')
         predictions = [tagger.tag(sentence) for sentence in te_feature]
