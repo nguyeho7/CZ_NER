@@ -48,7 +48,7 @@ def is_special(tag):
     """
     return tag in {"A", "C", "P", "T","s", "f", "segm", "cap", "lower", "upper", "?", "!"}
 
-def get_labels_tags(tokens):
+def get_labels_tags(tokens, merge="none"):
     '''
     Goes through all tokens from line_split and either adds them outright
     or expands them, removing the inner tags and instead appending
@@ -57,7 +57,9 @@ def get_labels_tags(tokens):
     ['<P_b Václavu>', '<P_e Klausovi>']
     here we use the tag P instead of pf/ps
     will be hard to compare performance like this
+    currently returns the supertypes, with merge=True it returns only B, I, O
     returns list of tokens with NE tokens expanded
+    i
     '''
     tags = []
     words= []
@@ -88,7 +90,24 @@ def get_labels_tags(tokens):
                     tags.append('{}_b'.format(tag))
                 else:
                     tags.append('{}_i'.format(tag))
+    if merge == "supertype":
+        tags = [supertype_tag(tag) for tag in tags]
+    elif merge == "BIO":
+        tags = [merge_tag(tag) for tag in tags]
     return words, tags 
+
+def merge_tag(tag):
+    if tag == "O":
+        return tag
+    else:
+        return tag[-1]
+
+def supertype_tag(tag):
+    if tag == "O":
+        return tag
+    else:
+        return tag[0] + "_" + tag[-1]
+
 
 def expand_NE(token):
     '''
@@ -148,7 +167,7 @@ def merge_POS_tags(filename1, filename2, output_filename):
         out.write(json.dumps(merged_dict, ensure_ascii=False))
 
 
-def transform_dataset(dataset, params):
+def transform_dataset(dataset, params, merge="supertype"):
     '''
     Transforms the cnec2.0 dataset into a format usable by pythoncrfsuite
     '''
@@ -156,7 +175,7 @@ def transform_dataset(dataset, params):
     labels = []
     ft = feature_extractor(params)
     for line in dataset:
-        tokens, tags = get_labels_tags(line_split(line))
+        tokens, tags = get_labels_tags(line_split(line), merge)
         labels.append(tags)
         features_list.append(ft.extract_features(tokens))
     return labels, features_list

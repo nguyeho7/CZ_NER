@@ -92,10 +92,11 @@ def main():
     models = parse_commands(sys.argv[3]) 
     tr_raw = load_dataset(train_filename)
     te_raw = load_dataset(test_filename)
+    merge = "supertype"
     for model, params in models:
         trainer = pycrfsuite.Trainer(verbose=False)
-        tr_label, tr_feature = transform_dataset(tr_raw, params)
-        te_label, te_feature = transform_dataset(te_raw, params) 
+        tr_label, tr_feature = transform_dataset(tr_raw, params, merge)
+        te_label, te_feature = transform_dataset(te_raw, params, merge) 
         for lab, feat in zip(tr_label, tr_feature):
             trainer.append(feat, lab)
         trainer.train(model+'.crfmodel')
