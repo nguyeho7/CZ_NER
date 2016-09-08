@@ -33,9 +33,24 @@ def line_split(line):
             yield line[current+1:i+1]
             current = i
 
+def is_special(tag):
+    """
+    special non NER tags
+    f = foreign word
+    segm = wrongly segmented word (start of next sentence)
+    cap = capitalised word
+    lower = word wrongly capitalised
+    upper = word wrongly written in lowercase
+    s = shortcut
+    ? = unspecified
+    ! = not annotated
+    A,C,P,T are containers for embedded annotations
+    """
+    return tag in {"A", "C", "P", "T","s", "f", "segm", "cap", "lower", "upper", "?", "!"}
+
 def get_labels_tags(tokens):
     '''
-    Goes through all tokens from line_pslit and expands them
+    Goes through all tokens from line_split and either adds them outright
     or expands them, removing the inner tags and instead appending
     outertag_b for first, outertag_i for inner and outertag_b for last word 
     <P<pf Václavu> <ps Klausovi>> turns into:
@@ -47,10 +62,22 @@ def get_labels_tags(tokens):
     tags = []
     words= []
     for token in tokens:
+        if token == "":
+            continue
         if not is_NE(token):
             words.append(token)
-            tags.append("o")
+            tags.append("O")
+        elif is_special(get_NE_tag(token)):
+            tag = get_NE_tag(token)
+            token = token[1 + len(tag):-1].strip()    
+            w_sub, t_sub = get_labels_tags(line_split(token))
+            tags.extend(t_sub)
+            words.extend(w_sub)
         else:
+            if token[0] == "(":
+                token = token[1:]
+            if token[-1] == ")":
+                token = token[:-1]
             tag = get_NE_tag(token)
             labels = []
             for label in expand_NE(get_label(token)):
@@ -59,10 +86,9 @@ def get_labels_tags(tokens):
                 words.append(label)
                 if i == 0:
                     tags.append('{}_b'.format(tag))
-                elif i<len(labels)-1:
+                else:
                     tags.append('{}_i'.format(tag))
     return words, tags 
-
 
 def expand_NE(token):
     '''
