@@ -4,9 +4,8 @@ from NER_utils import dump_POS_tags
 from NER_utils import load_dataset
 import pycrfsuite
 import sys 
-from sklearn.preprocessing import LabelBinarizer
-from sklearn.metrics import f1_score, classification_report
 from collections import Counter
+import random
 
 """
 Usage: python CRF_NER.py named_ent_dtest.txt named_ent_etest.txt model.txt 
@@ -31,7 +30,7 @@ def global_eval(ypred, ytrue):
             tp[yt] += 1
         else:
             fn[yt] += 1
-            fn[yp] += 1
+            fp[yp] += 1
     total_tp = 0
     total_fn = 0
     total_fp = 0
@@ -96,17 +95,25 @@ def main():
     te_raw = load_dataset(test_filename)
     merge = "supertype"
     for model, params in models:
-        #trainer = pycrfsuite.Trainer(verbose=False)
+        trainer = pycrfsuite.Trainer(verbose=True)
         tr_label, tr_feature = transform_dataset(tr_raw, params, merge)
         te_label, te_feature = transform_dataset(te_raw, params, merge) 
-        #for lab, feat in zip(tr_label, tr_feature):
-        #    trainer.append(feat, lab)
-        #trainer.train(model+'.crfmodel')
+        for lab, feat in zip(tr_label, tr_feature):
+            trainer.append(feat, lab)
+        trainer.train(model+'.crfmodel')
         tagger = pycrfsuite.Tagger()
         tagger.open(model+'.crfmodel')
+        text = [[w[0][5:] for w in sentence] for sentence in te_feature]
         predictions = [tagger.tag(sentence) for sentence in te_feature]
         evaluations = global_eval(predictions, te_label)
         output_evaluation(*evaluations, model)
-
+        for i in range(40):
+            num = random.randint(0, len(text))
+            curr_sent = "\t".join(text[num])
+            curr_pred = "\t ".join(predictions[num])
+            curr_gold = "\t ".join(te_label[num])
+            print("sent:\t",curr_sent)
+            print("pred:", curr_pred)
+            print("gold:", curr_gold)
 if __name__ == '__main__':
     main()
