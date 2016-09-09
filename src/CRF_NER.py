@@ -93,7 +93,9 @@ def main():
     models = parse_commands(sys.argv[3]) 
     tr_raw = load_dataset(train_filename)
     te_raw = load_dataset(test_filename)
-    merge = "supertype"
+    global_raw = load_dataset("named_ent.txt")
+    merge = "BIO"
+    dump_POS_tags(global_raw, "POS.json")
     for model, params in models:
         trainer = pycrfsuite.Trainer(verbose=True)
         tr_label, tr_feature = transform_dataset(tr_raw, params, merge)
