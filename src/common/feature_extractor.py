@@ -3,34 +3,6 @@ import requests
 import json
 from collections import defaultdict
 
-def is_NE(token):
-    if len(token) < 1:
-        return False
-    return '<' in token and '>' in token 
-
-def get_NE_label(token):
-    '''
-    returns a list of the NE labels, i.e. <gt Asii> gives ['Asii']
-    <P<pf Dubenka> <ps Kralova>> returns ['Dubenka', 'Kralova']
-    works recursively on embedded NE labels as well
-    '''
-    result = []
-    for ch in token.split(' '):
-        if '<' in ch:
-            continue
-        if '>' in ch:
-            result.append(ch.split('>')[0])
-        else:
-            result.append(ch)
-    return [r.strip() for r in result]
-
-def get_label(token):
-    '''
-    returns a label as string instead of list
-    '''
-    return " ".join(get_NE_label(token))
-
-
 class feature_extractor:
     '''
     Extracts the features from the given sentence, can be extended by appending more features to the result list
@@ -120,7 +92,7 @@ class feature_extractor:
         token,i,tokens = params
         end = len(tokens)-1
         if i > 0:
-            return "w[-1]", get_label(tokens[i-1])
+            return "w[-1]", tokens[i-1]
         else:
             return "w[-1]", "START"
 
@@ -128,7 +100,7 @@ class feature_extractor:
         token,i,tokens = params
         end = len(tokens)-1
         if i < end:
-            return "w[1]", get_label(tokens[i+1])
+            return "w[1]", tokens[i+1]
         else:
             return"w[1]"," END" 
 
@@ -136,7 +108,7 @@ class feature_extractor:
         token,i,tokens = params
         end = len(tokens)-1
         if i < end-1:
-            return "w[2]", get_label(tokens[i+2])
+            return "w[2]", tokens[i+2]
         else:
             return "w[2]", "END"
 
@@ -144,7 +116,7 @@ class feature_extractor:
         token,i,tokens = params
         end = len(tokens)-1
         if i > 1:
-            return "w[-2]", get_label(tokens[i-2])
+            return "w[-2]", tokens[i-2]
         else:
             return "w[-2]", "START"
 
