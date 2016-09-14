@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
-from feature_extractor import *
-import string
 import json
-
-"""
-Set of utils to transform the CNEC2.0 dataset into a format usable by pythoncrfsuite
-"""
+from czech_stemmer import cz_stem
 
 def load_dataset(filename="named_ent_dtest.txt"):
     '''
@@ -13,6 +8,42 @@ def load_dataset(filename="named_ent_dtest.txt"):
     '''
     with open(filename) as f:
         return f.read().split('\n')
+
+def is_NE(token):
+    if len(token) < 1:
+        return False
+    return '<' in token and '>' in token 
+
+def get_NE_tag(token):
+    start = 1
+    end = 1
+    while token[end] != ' ' and token[end] != '<':
+        end+=1
+    return token[start:end]
+
+
+def get_NE_label(token):
+    '''
+    returns a list of the NE labels, i.e. <gt Asii> gives ['Asii']
+    <P<pf Dubenka> <ps Kralova>> returns ['Dubenka', 'Kralova']
+    works recursively on embedded NE labels as well
+    '''
+    result = []
+    for ch in token.split(' '):
+        if '<' in ch:
+            continue
+        if '>' in ch:
+            result.append(ch.split('>')[0])
+        else:
+            result.append(ch)
+    return [r.strip() for r in result]
+
+def get_label(token):
+    '''
+    returns a label as string instead of list
+    '''
+    return " ".join(get_NE_label(token))
+
 
 def line_split(line):
     '''
@@ -106,8 +137,9 @@ def supertype_tag(tag):
     if tag == "O":
         return tag
     else:
+        if tag.startswith("O"):
+            print(tag)
         return tag[0] + "_" + tag[-1]
-
 
 def expand_NE(token):
     '''
@@ -135,61 +167,40 @@ def expand_NE(token):
             output[-1] += x
     return output
 
-def get_NE_tag(token):
-    start = 1
-    end = 1
-    while token[end] != ' ' and token[end] != '<':
-        end+=1
-    return token[start:end]
-
-def dump_POS_tags(dataset,filename):
+def save_indices(indices, filename):
     with open(filename, 'w') as f:
-        f.write('{')
-        ft = feature_extractor(['label', 'POS_curr_json'])
-        for i, line in enumerate(dataset):
-            tokens, tags = get_labels_tags(line_split(line))
-            POS_tags = ft.extract_features(tokens)
-            tag_dict = {p[0][5:]: p[1][7:] for p in POS_tags}
-            sentence = " ".join(tokens)
-            f.write(json.dumps(sentence, ensure_ascii=False))
-            f.write(":")
-            f.write(json.dumps(tag_dict, ensure_ascii=False))
-            if i < len(dataset)-1:
-                f.write(',\n')
-        f.write("}")
+        f.write(json.dumps(indices, ensure_ascii=False))
 
-def merge_POS_tags(filename1, filename2, output_filename):
-    with open(filename1) as f:
-        merged_dict = json.load(f.read())
-    with open(filename2) as g:
-        merged_dict.update(json.load(g.read()))
-    with open(output_filename, 'w') as out:
-        out.write(json.dumps(merged_dict, ensure_ascii=False))
-
-
-def transform_dataset(dataset, params, merge="supertype"):
-    '''
-    Transforms the cnec2.0 dataset into a format usable by pythoncrfsuite
-    '''
-    features_list = []
-    labels = []
-    ft = feature_extractor(params)
+def main():
+    dataset = load_dataset('named_ent_train.txt')
+    indices = {}
+    tag_indices = {}
+    i = 1 
+    tag_i = 0 
+    max_l = 0
     for line in dataset:
-        tokens, tags = get_labels_tags(line_split(line), merge)
-        labels.append(tags)
-        features_list.append(ft.extract_features(tokens))
-    return labels, features_list
-
-def dump_dataset(labels, features, filename):
-    """
-    NOTE: NOT WORKING YET. NESTED SENTENCES
-    """
-    with open(filename, 'w') as out:
-        for label, feature in zip(labels, features):
-            if len(feature) == 0:
+        labels, tags = get_labels_tags(line_split(line), merge="supertype")
+        if len(labels) > max_l:
+            max_l = len(labels)
+        for tag in tags:
+            if tag in tag_indices:
                 continue
-            s += ["\t".join(feature) for feature in features]
-            out.write(label[0])
-            out.write('\t')
-            out.write(s)
-            out.write('\n')
+            else:
+                tag_indices.update({tag: tag_i})
+                tag_i += 1
+        for token in labels:
+    #        stemmed_token = cz_stem(token)
+            stemmed_token = token
+            if stemmed_token in indices:
+                continue
+            else:
+                indices.update({stemmed_token: i})
+                i += 1
+    #save_indices(tag_indices, 'tag_indices.json')
+    #save_indices(indices, 'token_indices.json')
+    print('{} total words'.format(i))
+    print('{} max sentence length'.format(max_l))
+    print(len(tag_indices))
+    print(tag_indices)
+if __name__ == '__main__':
+    main()

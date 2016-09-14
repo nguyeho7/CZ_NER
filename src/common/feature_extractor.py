@@ -86,12 +86,12 @@ class feature_extractor:
                 function = False
         print("i will use following feature functions:", self.functions)
 
-    def extract_features(self, tokens, string_format=False):
+    def extract_features(self, tokens, string_format=True):
         """
         Given a tokenized sentence, returns either a list of features for each word
-        [["w[0]=first", "POS[0]=VB"],["w[0]=second", "POS[0]=ADJ"], ..] if string_format is true
+        [["w[0]=first", "POS[0]=VB", "cap=True"],["w[0]=second", "POS[0]=ADJ"], ..] if string_format is true
         or a list of dictionaries of features for each word
-        [{"w[0]": "first", "POS[0]": "VB"}, {"w[0]": "second", "POS[0]": "ADJ"}, ..]
+        [{"w[0]": "first", "POS[0]": "VB", "cap": True}, {"w[0]": "second", "POS[0]": "ADJ"}, ..]
         Both use the same feature functions defined in init
         """
         result = []
@@ -151,7 +151,7 @@ class feature_extractor:
     def ft_is_capitalised(self, *params):
         token = params[0]
         print(token)
-        return "is_upper", str(token[:1].isupper())
+        return "is_upper", token[:1].isupper()
 
     def ft_get_suffix_2(self, *params):
         token = params[0]
@@ -306,7 +306,7 @@ class feature_extractor:
             return
         token = params[0]
         flag = token in self.name_gzttr
-        return "name", str(flag)
+        return "name", flag
 
     def _load_name_gzttr(self, filename):
         self.name_gzttr =  set()
@@ -320,7 +320,7 @@ class feature_extractor:
             return
         token = params[0]
         flag = token in self.addr_gzttr
-        return "address", str(flag)
+        return "address", flag
 
     def _load_addr_gzttr(self, filename):
         self.addr_gzttr =  set()

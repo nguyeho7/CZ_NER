@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-from NER_utils import transform_dataset 
-from NER_utils import dump_POS_tags
-from NER_utils import load_dataset
+from .NER_utils import transform_dataset 
+from .NER_utils import dump_POS_tags
+from .NER_utils import load_dataset
 import pycrfsuite
 import sys 
 from collections import Counter
