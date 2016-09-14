@@ -15,7 +15,7 @@ def load_dataset(filename="named_ent_dtest.txt"):
         return f.read().split('\n')
 
 def load_transform_dataset_json(filename, params):
-    j = json.read(open(filename))
+    j = json.load(open(filename))
     sentences = []
     y_gold = []
     ft = feature_extractor(params)
@@ -188,12 +188,16 @@ def get_NE_tag(token):
     return token[start:end]
 
 def dump_POS_tags(dataset,filename):
-    with open(filename, 'w') as f:
-        f.write('{')
+    with open(filename, 'a') as f:
+        #f.write('{')
+        f.write("\n")
         ft = feature_extractor(['label', 'POS_curr_json'])
         for i, line in enumerate(dataset):
+            if i < 2312:
+                continue
             tokens, tags = get_labels_tags(line_split(line))
             POS_tags = ft.extract_features(tokens)
+            print(POS_tags)
             tag_dict = {p[0][5:]: p[1][7:] for p in POS_tags}
             sentence = " ".join(tokens)
             f.write(json.dumps(sentence, ensure_ascii=False))
