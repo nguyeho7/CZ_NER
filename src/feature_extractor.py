@@ -86,75 +86,87 @@ class feature_extractor:
                 function = False
         print("i will use following feature functions:", self.functions)
 
-    def extract_features(self, tokens):
+    def extract_features(self, tokens, string_format=False):
+        """
+        Given a tokenized sentence, returns either a list of features for each word
+        [["w[0]=first", "POS[0]=VB"],["w[0]=second", "POS[0]=ADJ"], ..] if string_format is true
+        or a list of dictionaries of features for each word
+        [{"w[0]": "first", "POS[0]": "VB"}, {"w[0]": "second", "POS[0]": "ADJ"}, ..]
+        Both use the same feature functions defined in init
+        """
         result = []
         for i, token in enumerate(tokens):
-            features = []
+            features = {}
             for ft_func in self.functions:
-                features.append(ft_func(token, i, tokens))
-            result.append(features)
+                key, value = ft_funct(token,i,tokens)
+                features.update({key: value})
+            if string_format:
+                ft_list = [key+"="+str(value) for key, value in features.items()]
+                result.append(ft_list)
+            else:
+                result.append(features)
         self.POS_tags={}
         return result 
 
     def ft_get_label(self, *params):
         token = params[0]
-        return "w[0]="+token
+        return "w[0]", token
 
     def ft_to_lower(self, *params):
         token = params[0]
-        return "lower="+token.lower()
+        return "lower", token.lower()
 
     def ft_get_prev(self, *params):
         token,i,tokens = params
         end = len(tokens)-1
         if i > 0:
-            return "w[-1]="+get_label(tokens[i-1])
+            return "w[-1]", get_label(tokens[i-1])
         else:
-            return "w[-1]=START"
+            return "w[-1]", "START"
 
     def ft_get_next(self, *params):
         token,i,tokens = params
         end = len(tokens)-1
         if i < end:
-            return "w[1]="+get_label(tokens[i+1])
+            return "w[1]", get_label(tokens[i+1])
         else:
-            return"w[1]=END" 
+            return"w[1]"," END" 
 
     def ft_get_next_2(self, *params):
         token,i,tokens = params
         end = len(tokens)-1
         if i < end-1:
-            return "w[2]="+get_label(tokens[i+2])
+            return "w[2]", get_label(tokens[i+2])
         else:
-            return "w[2]=END"
+            return "w[2]", "END"
 
     def ft_get_prev_2(self, *params):
         token,i,tokens = params
         end = len(tokens)-1
         if i > 1:
-            return "w[-2]="+get_label(tokens[i-2])
+            return "w[-2]", get_label(tokens[i-2])
         else:
-            return "w[-2]=START"
+            return "w[-2]", "START"
 
     def ft_is_capitalised(self, *params):
         token = params[0]
         print(token)
-        return "is_upper="+str(token[:1].isupper())
+        return "is_upper", str(token[:1].isupper())
 
     def ft_get_suffix_2(self, *params):
         token = params[0]
-        return "suffix_2="+token[:-2]
+        return "suffix_2", token[:-2]
 
     def ft_get_suffix_3(self, *params):
         token = params[0]
-        return "suffix_3="+token[:-3]
+        return "suffix_3",token[:-3]
 
     def ft_conditional_prev_1(self, *params):
         token, i, tokens = params
         if i==0:
-            return token+"|START"
+            return token, "|START"
         else:
-            return token+"|"+tokens[i-1]
+            return token, "|"+tokens[i-1]
 
     def ft_get_type(self, *params):
         token = params[0]
@@ -171,7 +183,7 @@ class feature_extractor:
                 k="."
             if not output.endswith(k):
                 output += k
-        return "type="+output
+        return "type", output
 
 
     def _get_POS(self, params):
@@ -196,7 +208,7 @@ class feature_extractor:
         Note this function needs the whole sentence
         """
         token, i, tokens = params
-        url='http://cloud.ailao.eu:4070/czech_parser' 
+        url='http://cloud.ailao.eu:4570/czech_parser' 
         sentence = " ".join(tokens)
         r = requests.post(url, data=sentence.encode('utf-8'))
         tags = [x.split('\t') for x in r.text.strip().split('\n')]
@@ -219,16 +231,16 @@ class feature_extractor:
         token = params[0]
         if token not in self.POS_tags:
             print(token)
-        return "POS[0]="+self.POS_tags[token]
+        return "POS[0]", self.POS_tags[token]
 
     def ft_POS_prev(self, *params):
         if not self.POS_tags:
             self._get_POS(params)
         token,i,tokens = params
         if i > 0:
-            return "POS[-1]="+self.POS_tags[tokens[i-1]]
+            return "POS[-1]", self.POS_tags[tokens[i-1]]
         else:
-            return "POS[-1]=START"
+            return "POS[-1]","START"
 
     def ft_POS_next(self, *params):
         if not self.POS_tags:
@@ -236,18 +248,18 @@ class feature_extractor:
         token,i,tokens = params
         end = len(tokens)-1
         if i < end:
-            return "POS[1]="+self.POS_tags[tokens[i+1]]
+            return "POS[1]",self.POS_tags[tokens[i+1]]
         else:
-            return "POS[1]=END"
+            return "POS[1]","END"
 
     def ft_POS_prev_2(self, *params):
         if not self.POS_tags:
             self._get_POS(params)
         token,i,tokens = params
         if i > 1:
-            return "POS[-2]="+self.POS_tags[tokens[i-2]]
+            return "POS[-2]", self.POS_tags[tokens[i-2]]
         else:
-            return "POS[-2]=START"
+            return "POS[-2]", "START"
 
     def ft_POS_next_2(self, *params):
         if not self.POS_tags:
@@ -255,32 +267,32 @@ class feature_extractor:
         token,i,tokens = params
         end = len(tokens)-1
         if i < end-1:
-            return "POS[2]="+self.POS_tags[tokens[i+1]]
+            return "POS[2]", self.POS_tags[tokens[i+1]]
         else:
-            return "POS[2]=END"
+            return "POS[2]", "END"
 
     def ft_POS_cond(self, *params):
         if not self.POS_tags:
             self._get_POS(params)
         token,i,tokens = params
         if i > 0:
-            return "POS[-1]|POS[0]="+self.POS_tags[tokens[i-1]]+"|"+self.POS_tags[token]
+            return "POS[-1]|POS[0]", self.POS_tags[tokens[i-1]]+"|"+self.POS_tags[token]
         else:
-            return "POS[-1]|POS[0]="+self.POS_tags[tokens[i-1]] + "|START" 
+            return "POS[-1]|POS[0]", self.POS_tags[tokens[i-1]] + "|START" 
 
     def ft_bclusters_8(self, *params, init=False):
         if init:
             self._load_clusters(params[0])
         token = params[0]
-        return "BC_8="+self.clusters[token.lower()][:8]
+        return "BC_8", self.clusters[token.lower()][:8]
 
     def ft_bclusters_12(self, *params):
         token = params[0]
-        return "BC_12="+self.clusters[token.lower()][:12]
+        return "BC_12", self.clusters[token.lower()][:12]
 
     def ft_bclusters_16(self, *params):
         token = params[0]
-        return "BC_16="+self.clusters[token.lower()][:16]
+        return "BC_16", self.clusters[token.lower()][:16]
 
     def _load_clusters(self, filename):
         with open(filename) as f:
@@ -294,7 +306,7 @@ class feature_extractor:
             return
         token = params[0]
         flag = token in self.name_gzttr
-        return "name="+str(flag)
+        return "name", str(flag)
 
     def _load_name_gzttr(self, filename):
         self.name_gzttr =  set()
@@ -308,7 +320,7 @@ class feature_extractor:
             return
         token = params[0]
         flag = token in self.addr_gzttr
-        return "address="+str(flag)
+        return "address", str(flag)
 
     def _load_addr_gzttr(self, filename):
         self.addr_gzttr =  set()
