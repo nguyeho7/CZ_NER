@@ -3,6 +3,7 @@ from src.common.NER_utils import transform_dataset
 from src.common.NER_utils import dump_POS_tags
 from src.common.NER_utils import load_dataset
 from src.common.eval import global_eval, output_evaluation
+import argparse
 import pycrfsuite
 import sys 
 from collections import Counter
@@ -25,20 +26,39 @@ def parse_commands(filename):
             models.append((tokens[0], tokens[1:]))
     return models
 
+def parse_args():
+    parser = argparse.ArgumentParser(description='Train or eval CRF_NER')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("-t", "--train", action="store_true")
+    group.add_argument("-p", "--predict", action="store_true")
+    parser.add_argument('--json', help="load eval set from json instead", action="store_true")
+    parser.add_argument('train_set', help='train set filename')
+    parser.add_argument('test_set', help='test set filename')
+    parser.add_argument('models', help='models filename')
+    parser.add_argument('merge', help='BIO|supertype|none')
+    return parser.parse_args()
 
-def main():
-    train_filename = sys.argv[1]
-    test_filename = sys.argv[2]
-    models = parse_commands(sys.argv[3]) 
-    tr_raw = load_dataset(train_filename)
-    te_raw = load_dataset(test_filename)
-    global_raw = load_dataset("named_ent.txt")
-    merge = "BIO"
-    dump_POS_tags(global_raw, "POS.json")
+
+def predict_and_eval(models, filename, merge, json=False):
+    if not json:
+        te_raw = load_dataset(filename)
+    for model, params in models:
+        tagger = pycrfsuite.Tagger()
+        tagger.open(model+".crfmodel")
+        if json:
+            labels, features = load_transform_dataset_json(filename, params, merge)
+        else:
+            labels, features = transform_dataset(te_raw, params, merge)
+        text = [[w[0][5:] for w in sentence] for sentence in features]
+        predictions = [tagger.tag(sentence) for sentence in features]
+        evaluations = global_eval(predictions, labels)
+        output_evaluation(*evaluations, model)
+
+def train_and_eval(models, train_set, test_set, merge):
     for model, params in models:
         trainer = pycrfsuite.Trainer(verbose=True)
-        tr_label, tr_feature = transform_dataset(tr_raw, params, merge)
-        te_label, te_feature = transform_dataset(te_raw, params, merge) 
+        tr_label, tr_feature = transform_dataset(train_set, params, merge)
+        te_label, te_feature = transform_dataset(test_set, params, merge) 
         for lab, feat in zip(tr_label, tr_feature):
             trainer.append(feat, lab)
         trainer.train(model+'.crfmodel')
@@ -48,13 +68,17 @@ def main():
         predictions = [tagger.tag(sentence) for sentence in te_feature]
         evaluations = global_eval(predictions, te_label)
         output_evaluation(*evaluations, model)
-        for i in range(40):
-            num = random.randint(0, len(text))
-            curr_sent = "\t".join(text[num])
-            curr_pred = "\t ".join(predictions[num])
-            curr_gold = "\t ".join(te_label[num])
-            print("sent:\t",curr_sent)
-            print("pred:", curr_pred)
-            print("gold:", curr_gold)
+
+def main():
+    args = parse_args()
+    models = parse_commands(args.models) 
+    merge = args.merge
+    if args.train:
+        tr_raw = load_dataset(args.train_set)
+        te_raw = load_dataset(args.test_set)
+        train_and_eval(models, tr_raw, te_raw, merge)
+    elif args.predict:
+        predict_and_eval(models, args.test_set, args.json)
+
 if __name__ == '__main__':
     main()
