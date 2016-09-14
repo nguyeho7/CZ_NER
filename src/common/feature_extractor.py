@@ -70,7 +70,7 @@ class feature_extractor:
         for i, token in enumerate(tokens):
             features = {}
             for ft_func in self.functions:
-                key, value = ft_funct(token,i,tokens)
+                key, value = ft_func(token,i,tokens)
                 features.update({key: value})
             if string_format:
                 ft_list = [key+"="+str(value) for key, value in features.items()]
