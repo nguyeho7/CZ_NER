@@ -53,7 +53,7 @@ def predict_and_eval(models, filename, merge, json=False):
         text = [[w[0][5:] for w in sentence] for sentence in features]
         predictions = [tagger.tag(sentence) for sentence in features]
         evaluations = global_eval(predictions, labels)
-        output_evaluation(*evaluations, model)
+        output_evaluation(*evaluations, model_name=model)
 
 def train_and_eval(models, train_set, test_set, merge):
     for model, params in models:
@@ -68,7 +68,7 @@ def train_and_eval(models, train_set, test_set, merge):
         text = [[w[0][5:] for w in sentence] for sentence in te_feature]
         predictions = [tagger.tag(sentence) for sentence in te_feature]
         evaluations = global_eval(predictions, te_label)
-        output_evaluation(*evaluations, model)
+        output_evaluation(*evaluations, model_name=model)
 
 def main():
     args = parse_args()
