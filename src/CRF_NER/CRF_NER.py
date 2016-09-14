@@ -2,6 +2,7 @@
 from src.common.NER_utils import transform_dataset 
 from src.common.NER_utils import dump_POS_tags
 from src.common.NER_utils import load_dataset
+from src.common.NER_utils import load_transform_dataset_json
 from src.common.eval import global_eval, output_evaluation
 import argparse
 import pycrfsuite
@@ -78,7 +79,7 @@ def main():
         te_raw = load_dataset(args.test_set)
         train_and_eval(models, tr_raw, te_raw, merge)
     elif args.predict:
-        predict_and_eval(models, args.test_set, args.json)
+        predict_and_eval(models, args.test_set, merge, args.json)
 
 if __name__ == '__main__':
     main()
