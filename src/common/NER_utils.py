@@ -14,6 +14,15 @@ def load_dataset(filename="named_ent_dtest.txt"):
     with open(filename) as f:
         return f.read().split('\n')
 
+def load_dataset_json(filename):
+    j = json.read(open(filename))
+    sentences = []
+    y_gold = []
+    for question in j:
+        sentences.append(question['tokens'])
+        y_gold.append(question['entity-labels'])
+    return sentences, y_gold
+
 def line_split(line):
     '''
     a split according to space characters that considers tags in <> brackets as one word
