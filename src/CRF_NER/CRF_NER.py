@@ -47,7 +47,7 @@ def predict_and_eval(models, filename, merge, json=False):
         tagger = pycrfsuite.Tagger()
         tagger.open(model+".crfmodel")
         if json:
-            labels, features = load_transform_dataset_json(filename, params, merge)
+            labels, features = load_transform_dataset_json(filename, params)
         else:
             labels, features = transform_dataset(te_raw, params, merge)
         text = [[w[0][5:] for w in sentence] for sentence in features]
