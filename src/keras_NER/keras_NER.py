@@ -8,7 +8,6 @@ from gensim.models.word2vec import Word2Vec
 import numpy as np
 from collections import Counter
 import json
-import random
 
 def load_embedding_matrix(filename='testmodel-139m_p3___.bin'):
     w = Word2Vec.load(filename)
@@ -60,12 +59,6 @@ def vectorize_tags(tags, idx, merge=False):
         res[i][idx[tag]] = 1
     return res
 
-def generate_features(dataset):
-    ft = feature_extractor([""])
-    for line in dataset:
-        tokens, tags = t.get_labels_tags(t.line_split(line), "none")
-        features_list.append(ft.extract_features(tokens, string_format=False))
-    return la
 def vectorize_sentence(tokens,word_idx):
     result = []
     for token in tokens:
