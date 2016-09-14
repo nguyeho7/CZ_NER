@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import random
+from collections import Counter
 
 def global_eval(ypred, ytrue):
     """
