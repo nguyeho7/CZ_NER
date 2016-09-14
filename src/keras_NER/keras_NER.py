@@ -10,8 +10,8 @@ from collections import Counter
 import json
 import random
 
-def load_embedding_matrix(filename='testmodel-139m_p3__.bin'):
-    w = Word2Vec.load_word2vec_format(filename)
+def load_embedding_matrix(filename='testmodel-139m_p3___.bin'):
+    w = Word2Vec.load(filename)
     word2index = {x : w.vocab[x].index + 2 for x in w.vocab}
     sorted_list = sorted(word2index.items(), key=lambda x: x[1])
     embeddings = []
@@ -19,22 +19,21 @@ def load_embedding_matrix(filename='testmodel-139m_p3__.bin'):
     embeddings.append([np.random.normal() for x in range(100)]) #OOV 
     embeddings.extend(w[x[0]] for x in sorted_list)
     embeddings_np = np.array(embeddings)
-    print(embeddings_np.shape)
     return word2index, embeddings_np
-
 
 def get_data(filename, indices, tag_indices, validation=False, merge="none"):
     raw_data = t.load_dataset(filename)
-    indices = load_indices('token_indices.json')
     vocab_size = len(indices)
-    tag_indices = load_indices(tag_indices)
     X_train = []
     Y_train = []
     text = []
+    ft_params = ['POS_curr', 'POS.json']
+    #ft = feature_extractor(ft_params)
     for line in raw_data:
         if len(line) == 0:
             continue
         tokens, tags = t.get_labels_tags(t.line_split(line), merge)
+     #   features = ft.extract_features(tokens)
         text.append(tokens)
         tokens_vector= vectorize_sentence(tokens, indices)
         X_train.append(tokens_vector)
@@ -49,12 +48,24 @@ def get_data(filename, indices, tag_indices, validation=False, merge="none"):
         y_train = pad_sequences(np.array(Y_train), maxlen=60)
     return x_train, y_train, text, vocab_size
 
+def vectorize_POS(features, POS_indices):
+    result = [[0 for x in range(10)] for y in range(len(POS_list))]
+    for feature in features:
+        result[POS_indices[feature['POS[0]']] = 1
+    return np.array(result)
+
 def vectorize_tags(tags, idx, merge=False):
     res = np.zeros((len(tags), len(idx)))
     for i,tag in enumerate(tags):
         res[i][idx[tag]] = 1
     return res
 
+def generate_features(dataset):
+    ft = feature_extractor([""])
+    for line in dataset:
+        tokens, tags = t.get_labels_tags(t.line_split(line), "none")
+        features_list.append(ft.extract_features(tokens, string_format=False))
+    return la
 def vectorize_sentence(tokens,word_idx):
     result = []
     for token in tokens:
@@ -97,27 +108,29 @@ def load_model(model, filename):
     model.load_weights(filename+".h5")
 
 def make_predictions(model, x_test, y_test, inverted_indices):
-    predictions = np.argmax(model.predict(x_test), axis=2)
+    predictions = model.predict(x_test)
+
+    #predictions = np.argmax(model.predict(x_test), axis=2)
     y_pred = []
     for k, sentence in enumerate(predictions):
         sentence_list = []
         for i in range(min(len(y_test[k]), 60)):
-            sentence_list.append(inverted_indices[sentence[i]])
+            sentence_list.append(sentence[i])
+            #sentence_list.append(inverted_indices[sentence[i]])
         y_pred.append(sentence_list)
     return y_pred
 
 def main():
-    model_filename = "supertypes_v2"
-    tag_indices_filename = "tag_indices.json"
-    #tag_indices_filename = "tag_indices_merged.json"
-    merge_type = "supertype" # BIO, none, supertype
+    model_filename = "BIO"
+    #tag_indices_filename = "tag_indices.json"
+    tag_indices_filename = "tag_indices_merged.json"
+    merge_type = "BIO" # BIO, none, supertype
     w2index, embeddings = load_embedding_matrix()
-    print('loading embeddings done')
-    x_train, y_train,_ , vocab_size = get_data('named_ent_train.txt', w2index, tag_indices_filename, merge=merge_type)
-    x_val, y_val,_,  _ = get_data('named_ent_dtest.txt', w2index, tag_indices_filename, merge=merge_type)
-    x_test, y_test, test_text, _ = get_data('named_ent_etest.txt', w2index, tag_indices_filename, validation=True, merge=merge_type)
     tag_indices = load_indices(tag_indices_filename)
     inverted_indices = {v: k for k, v in tag_indices.items()}
+    x_train, y_train,_ , vocab_size = get_data('named_ent_train.txt', w2index, tag_indices, merge=merge_type)
+    x_val, y_val,_,  _ = get_data('named_ent_dtest.txt', w2index, tag_indices, merge=merge_type)
+    x_test, y_test, test_text, _ = get_data('named_ent_etest.txt', w2index, tag_indices, validation=True, merge=merge_type)
     model = define_model_w2v(vocab_size, len(tag_indices), embeddings)
     train_model(model, x_train, y_train, x_val, y_val, model_filename)
     #load_model(model, model_filename)
