@@ -12,6 +12,9 @@ import json
 # stopwords are chosen by taking the top20 most common words that were not found in w2v
 stopwords = {'je', 've', 'z', 'v', 'se', 'o', 's', 'si', 'by', 'k', 'i', 'od', 'a', 'to', 'na',
     'po', 'do', 'u', 'za'}
+pos_index = {"ADJ": 0, "ADP": 1, "ADV": 2, "AUX": 3, "CONJ": 4, "DET": 5, "INTJ": 6, "NOUN": 7, 
+        "NUM": 8, "PART": 9, "PRON": 10, "PROPN": 11, "PUNCT": 12, "SCONJ": 13, "SYM": 14, "VERB":
+        15, "X": 16 }
 
 def load_embedding_matrix(filename='testmodel-139m_p3___.bin'):
     w = Word2Vec.load(filename)
@@ -54,10 +57,10 @@ def get_data(filename, indices, tag_indices, validation=False, merge="none"):
         y_train = pad_sequences(np.array(Y_train), maxlen=60)
     return x_train, y_train, text, vocab_size
 
-def vectorize_POS(features, POS_indices):
-    result = [[0 for x in range(10)] for y in range(len(POS_list))]
-    for feature in features:
-        result[POS_indices[feature['POS[0]']]] == 1
+def vectorize_POS(features):
+    result = [[0 for x in range(len(pos_index))] for y in range(len(features)))]
+    for i, feature in enumerate(features):
+        result[i][POS_index[feature['POS[0]']]] == 1
     return np.array(result)
 
 def vectorize_tags(tags, idx, merge=False):
@@ -136,9 +139,9 @@ def main():
     x_train, y_train,_ , vocab_size = get_data('named_ent_train.txt', w2index, tag_indices, merge=merge_type)
     x_val, y_val,_,  _ = get_data('named_ent_dtest.txt', w2index, tag_indices, merge=merge_type)
     x_test, y_test, test_text, _ = get_data('named_ent_etest.txt', w2index, tag_indices, validation=True, merge=merge_type)
-    model = define_model_w2v(vocab_size, len(tag_indices), embeddings)
-    train_model(model, x_train, y_train, x_val, y_val, model_filename)
-#    model = load_model(model_filename)
+    #model = define_model_w2v(vocab_size, len(tag_indices), embeddings)
+    #train_model(model, x_train, y_train, x_val, y_val, model_filename)
+    model = load_model(model_filename)
     y_pred = make_predictions(model, x_test, y_test, inverted_indices)
     evaluations = global_eval(y_pred, y_test)
     output_evaluation(*evaluations, model_name=model_filename)
