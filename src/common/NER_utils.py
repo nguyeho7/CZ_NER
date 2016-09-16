@@ -17,9 +17,9 @@ def load_dataset(filename="named_ent_dtest.txt"):
 def load_transform_dataset_json(filename, pos_filename,params):
     j = json.load(open(filename))
     #first read all already downloaded features
-    pos_file_read = open(pos_filename, 'r')
+    pos_file = open(pos_filename, 'r')
     ft_dict = {}
-    for line in pos_file_read:
+    for line in pos_file.read().split('\n'):
         curr = json.loads(line[:-1])
         last = curr.key()
         ft_dict.update(curr)        
