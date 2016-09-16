@@ -21,7 +21,7 @@ def load_transform_dataset_json(filename, pos_filename,params):
     ft_dict = {}
     for line in pos_file.read().split('\n'):
         curr = json.loads(line[:-1])
-        last = curr.key()
+        last = list(curr.keys())[0]
         ft_dict.update(curr)        
     sentences = []
     y_gold = []
