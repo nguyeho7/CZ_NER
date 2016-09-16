@@ -19,7 +19,8 @@ def load_transform_dataset_json(filename, pos_filename,params):
     #first read all already downloaded features
     pos_file = open(pos_filename, 'r')
     ft_dict = {}
-    for line in pos_file.read().split('\n'):
+    lines = pos_file.read().split('\n')
+    for line in lines:
         curr = json.loads(line[:-1])
         last = list(curr.keys())[0]
         ft_dict.update(curr)        
