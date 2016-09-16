@@ -19,7 +19,7 @@ def load_transform_dataset_json(filename, pos_filename,params):
     #first read all already downloaded features
     pos_file_read = open(pos_filename, 'r')
     ft_dict = {}
-    for line in pos_file:
+    for line in pos_file_read:
         curr = json.loads(line[:-1])
         last = curr.key()
         ft_dict.update(curr)        
@@ -39,6 +39,7 @@ def load_transform_dataset_json(filename, pos_filename,params):
         sentences.append(features)
         y_gold.append(question['entity-labels'])
         if question['qId'] == last:
+            print("CONTINUING FROM:", last)
             flag = False
     return sentences, y_gold
 
