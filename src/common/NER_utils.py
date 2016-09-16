@@ -16,19 +16,30 @@ def load_dataset(filename="named_ent_dtest.txt"):
 
 def load_transform_dataset_json(filename, pos_filename,params):
     j = json.load(open(filename))
-    pos_file = open(pos_filename, 'a')
-    pos_file.write('{')
+    #first read all already downloaded features
+    pos_file_read = open(pos_filename, 'r')
+    ft_dict = {}
+    for line in pos_file:
+        curr = json.loads(line[:-1])
+        last = curr.key()
+        ft_dict.update(curr)        
     sentences = []
     y_gold = []
-    ft = feature_extractor(params)
+    #now append newly downloaded features to same file
+    pos_file = open(pos_filename, 'a')
+    flag = True
     for i, question in enumerate(j):
-        features = ft.extract_features(question['tokens'])
+        if flag:
+            features = ft_dict[question['qId']]
+        else:
+            features = ft.extract_features(question['tokens'])
+            pos_file.write(json.dumps({question['qId'] : tuple(features)}))
+            if i < len(j)-1:
+                pos_file.write(',\n')
         sentences.append(features)
         y_gold.append(question['entity-labels'])
-        pos_file.write(json.dumps({question['qId'] : tuple(features)}))
-        if i < len(j)-1:
-            pos_file.write(',\n')
-    pos_file.write("}")
+        if question['qId'] == last:
+            flag = False
     return sentences, y_gold
 
 def line_split(line):
