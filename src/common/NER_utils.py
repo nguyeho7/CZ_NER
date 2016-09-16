@@ -17,7 +17,7 @@ def load_dataset(filename="named_ent_dtest.txt"):
 def load_transform_dataset_json(filename, pos_filename,params):
     j = json.load(open(filename))
     #first read all already downloaded features
-    pos_file = open(pos_filename, 'r')
+    pos_file = open(pos_filename)
     ft_dict = {}
     lines = pos_file.read().split('\n')
     for line in lines:
@@ -31,10 +31,10 @@ def load_transform_dataset_json(filename, pos_filename,params):
     flag = True
     for i, question in enumerate(j):
         if flag:
-            features = ft_dict[question['qId']]
+            features = ft_dict[question['qId']][0]
         else:
             features = ft.extract_features(question['tokens'])
-            pos_file.write(json.dumps({question['qId'] : tuple(features)}))
+            pos_file.write(json.dumps({question['qId'] : features}))
             if i < len(j)-1:
                 pos_file.write(',\n')
         sentences.append(features)
