@@ -25,7 +25,7 @@ def load_transform_dataset_json(filename, pos_filename,params):
         features = ft.extract_features(question['tokens'])
         sentences.append(features)
         y_gold.append(question['entity-labels'])
-        pos_file.write(json.dumps({question['tokens'] : features}))
+        pos_file.write(json.dumps({question['tokens'] : tuple(features)}))
         if i < len(j)-1:
             pos_file.write(',\n')
     pos_file.write("}")
