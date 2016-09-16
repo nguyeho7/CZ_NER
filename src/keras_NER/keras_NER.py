@@ -5,16 +5,23 @@ from keras.models import Sequential, load_model, model_from_json
 from keras.layers import Masking, Embedding, Bidirectional, Merge, TimeDistributed, Dense, LSTM
 from keras.preprocessing.sequence import pad_sequences
 from gensim.models.word2vec import Word2Vec
+from string import punctuation
 import numpy as np
-from collections import Counter
 import json
+
+# stopwords are chosen by taking the top20 most common words that were not found in w2v
+stopwords = {'je', 've', 'z', 'v', 'se', 'o', 's', 'si', 'by', 'k', 'i', 'od', 'a', 'to', 'na',
+    'po', 'do', 'u', 'za'}
 
 def load_embedding_matrix(filename='testmodel-139m_p3___.bin'):
     w = Word2Vec.load(filename)
-    word2index = {x : w.vocab[x].index + 2 for x in w.vocab}
+    word2index = {x : w.vocab[x].index + 5 for x in w.vocab}
     sorted_list = sorted(word2index.items(), key=lambda x: x[1])
     embeddings = []
     embeddings.append(np.zeros(100)) # padding
+    embeddings.append([np.random.normal() for x in range(100)]) #is_digit 
+    embeddings.append([np.random.normal() for x in range(100)]) #is_punctuation
+    embeddings.append([np.random.normal() for x in range(100)]) #is_stopword 
     embeddings.append([np.random.normal() for x in range(100)]) #OOV 
     embeddings.extend(w[x[0]] for x in sorted_list)
     embeddings_np = np.array(embeddings)
@@ -50,7 +57,7 @@ def get_data(filename, indices, tag_indices, validation=False, merge="none"):
 def vectorize_POS(features, POS_indices):
     result = [[0 for x in range(10)] for y in range(len(POS_list))]
     for feature in features:
-        result[POS_indices[feature['POS[0]']] = 1
+        result[POS_indices[feature['POS[0]']]] == 1
     return np.array(result)
 
 def vectorize_tags(tags, idx, merge=False):
@@ -62,10 +69,17 @@ def vectorize_tags(tags, idx, merge=False):
 def vectorize_sentence(tokens,word_idx):
     result = []
     for token in tokens:
-        if token in word_idx:
-            result.append(word_idx[token])
-        else:
+        tok = token.lower()
+        if tok in word_idx:
+            result.append(word_idx[tok])
+        elif tok.isdigit():
             result.append(1)
+        elif tok in punctuation:
+            result.append(2)
+        elif tok in stopwords:
+            result.append(3)
+        else:
+            result.append(4)
     return result
 
 def load_indices(filename):
@@ -95,21 +109,19 @@ def train_model(model, x_train, y_train, x_val, y_val, filename):
     with open(filename+".json", "w") as f:
         f.write(model.to_json())
 
-def load_model(model, filename):
+def load_model(filename):
     with open(filename+".json") as f:
         model = model_from_json(f.read())
     model.load_weights(filename+".h5")
+    return model
 
 def make_predictions(model, x_test, y_test, inverted_indices):
-    predictions = model.predict(x_test)
-
-    #predictions = np.argmax(model.predict(x_test), axis=2)
+    predictions = np.argmax(model.predict(x_test), axis=2)
     y_pred = []
     for k, sentence in enumerate(predictions):
         sentence_list = []
         for i in range(min(len(y_test[k]), 60)):
-            sentence_list.append(sentence[i])
-            #sentence_list.append(inverted_indices[sentence[i]])
+            sentence_list.append(inverted_indices[sentence[i]])
         y_pred.append(sentence_list)
     return y_pred
 
@@ -126,11 +138,10 @@ def main():
     x_test, y_test, test_text, _ = get_data('named_ent_etest.txt', w2index, tag_indices, validation=True, merge=merge_type)
     model = define_model_w2v(vocab_size, len(tag_indices), embeddings)
     train_model(model, x_train, y_train, x_val, y_val, model_filename)
-    #load_model(model, model_filename)
+#    model = load_model(model_filename)
     y_pred = make_predictions(model, x_test, y_test, inverted_indices)
     evaluations = global_eval(y_pred, y_test)
     output_evaluation(*evaluations, model_name=model_filename)
     random_sample("sentences_50", test_text, y_pred, y_test, 50)
-
 if __name__ == '__main__':
     main()
