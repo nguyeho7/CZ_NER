@@ -122,7 +122,6 @@ class feature_extractor:
 
     def ft_is_capitalised(self, *params):
         token = params[0]
-        print(token)
         return "is_upper", token[:1].isupper()
 
     def ft_get_suffix_2(self, *params):
@@ -168,7 +167,6 @@ class feature_extractor:
         if not self.POS_dict:
             self._get_POS_online(params)
         elif sentence not in self.POS_dict:
-            print('should not happen')
             self._get_POS_online(params)
         else:
             self.POS_tags = defaultdict(lambda: "none")
@@ -185,6 +183,7 @@ class feature_extractor:
         r = requests.post(url, data=sentence.encode('utf-8'))
         tags = [x.split('\t') for x in r.text.strip().split('\n')]
         self.POS_tags = defaultdict(lambda: "none")
+        print(sentence)
         self.POS_tags.update({tag[1] : tag[3] for tag in tags})
 
     def _load_POS(self, filename):
