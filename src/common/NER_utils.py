@@ -14,14 +14,21 @@ def load_dataset(filename="named_ent_dtest.txt"):
     with open(filename) as f:
         return f.read().split('\n')
 
-def load_transform_dataset_json(filename, params):
+def load_transform_dataset_json(filename, pos_filename,params):
     j = json.load(open(filename))
+    pos_file = open(pos_filename, 'a')
+    pos_file.write('{')
     sentences = []
     y_gold = []
     ft = feature_extractor(params)
-    for question in j:
-        sentences.append(ft.extract_features(question['tokens']))
+    for i, question in enumerate(j):
+        features = ft.extract_features(question['tokens'])
+        sentences.append(features)
         y_gold.append(question['entity-labels'])
+        pos_file.write(json.dumps({question['tokens'] : features}))
+        if i < len(j)-1:
+            pos_file.write(',\n')
+    pos_file.write("}")
     return sentences, y_gold
 
 def line_split(line):
@@ -190,15 +197,14 @@ def get_NE_tag(token):
 def dump_POS_tags(dataset,filename):
     with open(filename, 'a') as f:
         #f.write('{')
-        f.write("\n")
         ft = feature_extractor(['label', 'POS_curr_json'])
         for i, line in enumerate(dataset):
             if i < 2312:
                 continue
             tokens, tags = get_labels_tags(line_split(line))
-            POS_tags = ft.extract_features(tokens)
+            POS_tags = ft.extract_features(tokens, string_format=False)
             print(POS_tags)
-            tag_dict = {p[0][5:]: p[1][7:] for p in POS_tags}
+            tag_dict = {p['w[0]']: p['POS[0]'] for p in POS_tags}
             sentence = " ".join(tokens)
             f.write(json.dumps(sentence, ensure_ascii=False))
             f.write(":")
