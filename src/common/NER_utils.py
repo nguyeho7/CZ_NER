@@ -208,11 +208,16 @@ def get_NE_tag(token):
     return token[start:end]
 
 def dump_POS_tags(dataset,filename):
+    downloaded = 0
+    with open(filename, 'r') as g:
+        for line in g:
+            downloaded += 1
     with open(filename, 'a') as f:
         #f.write('{')
+        f.write('\n')
         ft = feature_extractor(['label', 'POS_curr_json'])
         for i, line in enumerate(dataset):
-            if i < 2312:
+            if i < downloaded:
                 continue
             tokens, tags = get_labels_tags(line_split(line))
             POS_tags = ft.extract_features(tokens, string_format=False)
