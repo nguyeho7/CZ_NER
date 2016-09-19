@@ -231,6 +231,30 @@ def dump_POS_tags(dataset,filename):
                 f.write(',\n')
         f.write("}")
 
+def dump_POS_tags_2(dataset, filename):
+    sentences = []
+    ft = feature_extractor()
+    for i, line in enumerate(dataset):
+        tokens, tags = get_labels_tags(line_split(line))
+        sentences.append(' '.join(tokens))
+    text = "*#!*g".join(sentences)
+    url='http://cloud.ailao.eu:4571/czech_parser' 
+    r = requests.post(url, data=sentence.encode('utf-8'))
+    tags = list(filter(lambda y: len(y) > 1, x.split('\t') for x in r.text.strip().split('\n')))
+    start = 0
+    end = 0
+    tags_per_sentence = {}
+    for i, tag in enumerate(tags):
+        if i == 0:
+            continue
+        if tag[0] == '1':
+            end = i
+            sentence = " ".join(x[1] for x in tags[start:end])
+            tags_per_sentence.update({sentence: {x[0] : x[3] for x in tags[start:end]})
+            start = end
+    with open(filename, "w") as f:
+        f.write(json.dumps(tags_per_sentence))
+
 def merge_POS_tags(filename1, filename2, output_filename):
     with open(filename1) as f:
         merged_dict = json.load(f.read())
