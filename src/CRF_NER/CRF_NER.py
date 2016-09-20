@@ -32,6 +32,7 @@ def parse_args():
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-t", "--train", action="store_true")
     group.add_argument("-p", "--predict", action="store_true")
+    group.add_argument("--entity", action="store_true")
     parser.add_argument('--json', help="load eval set from json instead", action="store_true")
     parser.add_argument('train_set', help='train set filename')
     parser.add_argument('test_set', help='test set filename')
@@ -39,6 +40,17 @@ def parse_args():
     parser.add_argument('merge', help='BIO|supertype|none')
     return parser.parse_args()
 
+def entity_linking_tr_eval(train_set, test_set, models, merge):
+    for model, params in models:
+        trainer = pycrfsuite.Trainer(verbose=True)
+        tr_label, tr_feature = load_transform_dataset_json(train_set, params, merge)
+        te_label, te_feature = load_transform_dataset_json(test_set, params, merge) 
+        trainer.train(model+'.crfmodel')
+        tagger = pycrfsuite.Tagger()
+        tagger.open(model+'.crfmodel')
+        predictions = [tagger.tag(sentence) for sentence in te_feature]
+        evaluations = global_eval(predictions, te_label)
+        output_evaluation(*evaluations, model_name=model)
 
 def predict_and_eval(models, filename, merge, json=False):
     if not json:
@@ -74,12 +86,14 @@ def main():
     args = parse_args()
     models = parse_commands(args.models) 
     merge = args.merge
+    dump_POS_tags(load_dataset(args.train_set), "POS.json")
     if args.train:
         tr_raw = load_dataset(args.train_set)
         te_raw = load_dataset(args.test_set)
         train_and_eval(models, tr_raw, te_raw, merge)
     elif args.predict:
         predict_and_eval(models, args.test_set, merge, args.json)
-
+    elif args.entity:
+        entity_linking_tr_eval(args.train_set, args.test_set, models, merge)
 if __name__ == '__main__':
     main()
