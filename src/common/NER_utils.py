@@ -42,7 +42,7 @@ def load_transform_dataset_json(filename, pos_filename,params):
         if question['qId'] == last:
             print("CONTINUING FROM:", last)
             flag = False
-    return sentences, y_gold
+    return y_gold, sentences
 
 def line_split(line):
     '''
@@ -237,10 +237,10 @@ def dump_POS_tags_2(dataset, filename):
     for i, line in enumerate(dataset):
         tokens, tags = get_labels_tags(line_split(line))
         sentences.append(' '.join(tokens))
-    text = "*#!*g".join(sentences)
+    text = "*#!*".join(sentences)
     url='http://cloud.ailao.eu:4571/czech_parser' 
-    r = requests.post(url, data=sentence.encode('utf-8'))
-    tags = list(filter(lambda y: len(y) > 1, x.split('\t') for x in r.text.strip().split('\n')))
+    r = requests.post(url, data=text.encode('utf-8'))
+    tags = list(filter(lambda y: len(y) > 1, (x.split('\t') for x in r.text.strip().split('\n'))))
     start = 0
     end = 0
     tags_per_sentence = {}
@@ -250,7 +250,7 @@ def dump_POS_tags_2(dataset, filename):
         if tag[0] == '1':
             end = i
             sentence = " ".join(x[1] for x in tags[start:end])
-            tags_per_sentence.update({sentence: {x[0] : x[3] for x in tags[start:end]})
+            tags_per_sentence.update({sentence: {x[1] : x[3] for x in tags[start:end]}})
             start = end
     with open(filename, "w") as f:
         f.write(json.dumps(tags_per_sentence))
