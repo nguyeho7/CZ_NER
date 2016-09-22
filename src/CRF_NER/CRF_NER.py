@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 from src.common.NER_utils import transform_dataset 
 from src.common.NER_utils import dump_POS_tags
-from src.common.NER_utils import load_dataset
-from src.common.NER_utils import load_transform_dataset_json
+from src.common.NER_utils import load_dataset, load_dataset_json
 from src.common.eval import global_eval, output_evaluation
 import argparse
 import pycrfsuite
@@ -43,8 +42,8 @@ def parse_args():
 def entity_linking_tr_eval(train_set, test_set, models, merge):
     for model, params in models:
         trainer = pycrfsuite.Trainer(verbose=True)
-        tr_label, tr_feature = load_transform_dataset_json(train_set, params, merge)
-        te_label, te_feature = load_transform_dataset_json(test_set, params, merge) 
+        tr_label, tr_feature = load_dataset_json(train_set, params)
+        te_label, te_feature = load_dataset_json(test_set, params) 
         trainer.train(model+'.crfmodel')
         tagger = pycrfsuite.Tagger()
         tagger.open(model+'.crfmodel')
@@ -86,7 +85,6 @@ def main():
     args = parse_args()
     models = parse_commands(args.models) 
     merge = args.merge
-    dump_POS_tags(load_dataset(args.train_set), "POS.json")
     if args.train:
         tr_raw = load_dataset(args.train_set)
         te_raw = load_dataset(args.test_set)

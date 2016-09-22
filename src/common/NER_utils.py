@@ -14,16 +14,13 @@ def load_dataset(filename="named_ent_dtest.txt"):
     with open(filename) as f:
         return f.read().split('\n')
 
-def load_transform_dataset_json(filename, pos_filename,params):
+def load_dataset_json(filename, params):
     j = json.load(open(filename))
-    lines = pos_file.read().split('\n')
     sentences = []
     y_gold = []
-    flag = True
-    for i, question in enumerate(j):
+    ft = feature_extractor(params)
+    for question in j:
         features = ft.extract_features(question['tokens'])
-        if i < len(j)-1:
-            pos_file.write(',\n')
         sentences.append(features)
         y_gold.append(question['entity-labels'])
     return y_gold, sentences
