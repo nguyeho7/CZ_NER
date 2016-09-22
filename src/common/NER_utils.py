@@ -25,6 +25,19 @@ def load_dataset_json(filename, params):
         y_gold.append(question['entity-labels'])
     return y_gold, sentences
 
+def load_transform_dataset(filename, params, merge):
+    """
+    Loads and transforms given dataset, will distinguish between txt (CNEC2.0) and .json (internal
+    entity linking benchmark) formats
+    .json dictionary simply needs a 'entity-labels' key for labels and 'tokens' key for the
+    tokenized sentence
+    returns correct_labels, features 
+    """
+    if filename.endswith(".json"):
+        return load_dataset_json(filename, params) #merge is "BIO" by default
+    else:
+        return transform_dataset(load_dataset(filename), params, merge)
+
 def line_split(line):
     '''
     a split according to space characters that considers tags in <> brackets as one word
