@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import src.common.NER_utils as t
 from src.common.eval import global_eval, output_evaluation, random_sample
-from keras.models import Sequential, load_model, model_from_json
-from keras.layers import Masking, Embedding, Bidirectional, Merge, TimeDistributed, Dense, LSTM
+from keras.models import Sequential, load_model, model_from_json, Model
+from keras.layers import Input, Embedding, Bidirectional, Merge, TimeDistributed, Dense, LSTM, merge
 from keras.preprocessing.sequence import pad_sequences
 from gensim.models.word2vec import Word2Vec
 from string import punctuation
@@ -12,9 +12,9 @@ import json
 # stopwords are chosen by taking the top20 most common words that were not found in w2v
 stopwords = {'je', 've', 'z', 'v', 'se', 'o', 's', 'si', 'by', 'k', 'i', 'od', 'a', 'to', 'na',
     'po', 'do', 'u', 'za'}
-pos_index = {"ADJ": 0, "ADP": 1, "ADV": 2, "AUX": 3, "CONJ": 4, "DET": 5, "INTJ": 6, "NOUN": 7, 
-        "NUM": 8, "PART": 9, "PRON": 10, "PROPN": 11, "PUNCT": 12, "SCONJ": 13, "SYM": 14, "VERB":
-        15, "X": 16 }
+pos_index = {"ADJ": 1, "ADP": 2, "ADV": 3, "AUX": 4, "CONJ": 5, "DET": 6, "INTJ": 7, "NOUN": 8, 
+        "NUM": 9, "PART": 10, "PRON": 11, "PROPN": 12, "PUNCT": 13, "SCONJ": 14, "SYM": 15, "VERB":15, "X": 16, 'none' : 0}
+feature_functs = ["is_upper", "name", "address"]
 
 def load_embedding_matrix(filename='testmodel-139m_p3___.bin'):
     w = Word2Vec.load(filename)
@@ -36,18 +36,23 @@ def get_data(filename, indices, tag_indices, validation=False, merge="none"):
     X_train = []
     Y_train = []
     text = []
-    ft_params = ['POS_curr', 'POS.json']
-    #ft = feature_extractor(ft_params)
+    ft_params = ['POS_curr', 'POS_final.json', "is_capitalised", 'addr_gzttr', 'adresy.txt',
+            'name_gzttr','czech_names']
+    ft = t.feature_extractor(ft_params)
+    feature_list = []
+    POS = []
     for line in raw_data:
         if len(line) == 0:
             continue
         tokens, tags = t.get_labels_tags(t.line_split(line), merge)
-     #   features = ft.extract_features(tokens)
+        features = ft.extract_features(tokens, string_format=False)
+        POS.append(vectorize_POS(features))
+        feature_list.append(vectorize_features(features))
         text.append(tokens)
         tokens_vector= vectorize_sentence(tokens, indices)
         X_train.append(tokens_vector)
         if validation:
-            Y_train.append(tags)
+            Y_train.append(tags[:60])
         else:
             Y_train.append(vectorize_tags(tags, tag_indices))
     x_train = pad_sequences(np.array(X_train), maxlen=60)
@@ -55,14 +60,27 @@ def get_data(filename, indices, tag_indices, validation=False, merge="none"):
         y_train = np.array(Y_train)
     else:
         y_train = pad_sequences(np.array(Y_train), maxlen=60)
-    return x_train, y_train, text, vocab_size
+    POS_np = pad_sequences(np.array(POS), maxlen=60)
+    feature_list_np = pad_sequences(np.array(feature_list), maxlen=60)
+    return x_train, y_train, POS_np, feature_list_np, text, vocab_size
 
 def vectorize_POS(features):
-    result = [[0 for x in range(len(pos_index))] for y in range(len(features)))]
+    result = [[0 for x in range(len(pos_index))] for y in range(len(features))]
     for i, feature in enumerate(features):
-        result[i][POS_index[feature['POS[0]']]] == 1
+        result[i][pos_index[feature['POS[0]']]] = 1
     return np.array(result)
 
+def vectorize_features(features):
+    #for every feature apart from POS tags
+    # list of features:
+    # is_capitalised, addr_gzttr, name_gzttr
+    result = [[0 for x in range(len(feature_functs))] for y in range(len(features))]
+    for i, word_ft in enumerate(features):
+        for j, ft in enumerate(feature_functs):
+            if word_ft[ft]:
+                result[i][j] = 1
+    return np.array(result)
+            
 def vectorize_tags(tags, idx, merge=False):
     res = np.zeros((len(tags), len(idx)))
     for i,tag in enumerate(tags):
@@ -98,6 +116,24 @@ def define_model_w2v(vocab_size, tags, embeddings):
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
     return model
 
+def define_model_concat(vocab_size, tags, embeddings,  POS_vectors, feature_vectors):
+    sentence_input = Input(shape=(60,), dtype='int32')
+    embedding_layer = Embedding(input_dim = embeddings.shape[0], output_dim=embeddings.shape[1],
+        weights=[embeddings], input_length=60, mask_zero=True)(sentence_input)
+
+    POS_input = Input(shape=(60, len(pos_index)))
+ #   POS_layer = Dense(len(pos_index))(POS_input)
+
+    feature_input = Input(shape=(60, len(feature_functs)))
+#    feature_layer = Dense(len(feature_functs))(feature_input)
+    
+    merged = merge([embedding_layer, POS_input, feature_input], mode='concat')
+    bidir = Bidirectional(LSTM(128, return_sequences=True))(merged)
+    time_dist_dense = TimeDistributed(Dense(tags, activation='softmax'))(bidir)
+    model = Model(input=[sentence_input, POS_input, feature_input], output=time_dist_dense)
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
+    return model
+
 def define_model(vocab_size, tags):
     model = Sequential()
     model.add(Embedding(input_dim=vocab_size+1, output_dim=100, input_length=60, mask_zero=True))
@@ -123,8 +159,11 @@ def make_predictions(model, x_test, y_test, inverted_indices):
     y_pred = []
     for k, sentence in enumerate(predictions):
         sentence_list = []
-        for i in range(min(len(y_test[k]), 60)):
-            sentence_list.append(inverted_indices[sentence[i]])
+        length = len(y_test[k])
+        for word in sentence[-length:]: 
+            sentence_list.append(inverted_indices[word])
+        print(len(sentence_list), len(y_test[k]))
+        assert len(sentence_list) == len(y_test[k])
         y_pred.append(sentence_list)
     return y_pred
 
@@ -136,13 +175,19 @@ def main():
     w2index, embeddings = load_embedding_matrix()
     tag_indices = load_indices(tag_indices_filename)
     inverted_indices = {v: k for k, v in tag_indices.items()}
-    x_train, y_train,_ , vocab_size = get_data('named_ent_train.txt', w2index, tag_indices, merge=merge_type)
-    x_val, y_val,_,  _ = get_data('named_ent_dtest.txt', w2index, tag_indices, merge=merge_type)
-    x_test, y_test, test_text, _ = get_data('named_ent_etest.txt', w2index, tag_indices, validation=True, merge=merge_type)
-    #model = define_model_w2v(vocab_size, len(tag_indices), embeddings)
-    #train_model(model, x_train, y_train, x_val, y_val, model_filename)
-    model = load_model(model_filename)
-    y_pred = make_predictions(model, x_test, y_test, inverted_indices)
+
+    x_train, y_train, POS_train, ft_train ,_,  vocab_size = get_data('named_ent_train.txt', w2index, tag_indices, merge=merge_type)
+    x_val, y_val, POS_val, ft_val, _, _ = get_data('named_ent_dtest.txt', w2index, tag_indices, merge=merge_type)
+    x_test, y_test, POS_test, ft_test, test_text, _ = get_data('named_ent_etest.txt', w2index, tag_indices, validation=True, merge=merge_type)
+
+    print("POS SHAPE", POS_train.shape)
+    print("FEATURES SHAPE", ft_train.shape)
+    print("embedd shape", x_train.shape)
+
+    model = define_model_concat(vocab_size, len(tag_indices), embeddings, POS_train, ft_train)
+    train_model(model, [x_train, POS_train, ft_train], y_train, x_val, y_val, model_filename)
+    #model = load_model(model_filename)
+    #y_pred = make_predictions(model, x_test, y_test, inverted_indices)
     evaluations = global_eval(y_pred, y_test)
     output_evaluation(*evaluations, model_name=model_filename)
     random_sample("sentences_50", test_text, y_pred, y_test, 50)
