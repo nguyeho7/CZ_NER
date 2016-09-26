@@ -47,16 +47,17 @@ def predict_and_eval(models, filename, merge):
         output_evaluation(*evaluations, model_name=model)
         random_sample("sentences_50_predict_cnec", text, predictions, labels, 50)
 
+def get_filenames(train_set):
+    return train_set.split(' ')
+
 def train_and_eval(models, train_set, test_set, merge):
     for model, params in models:
         trainer = pycrfsuite.Trainer(verbose=True)
-        tr_label, tr_feature, _ = load_transform_dataset(train_set, params, merge)
         te_label, te_feature, text = load_transform_dataset(test_set, params, merge) 
-    #    json_label, json_feature = load_transform_dataset('named_ent_train.txt', params, merge)
-        for lab, feat in zip(tr_label, tr_feature):
-            trainer.append(feat, lab)
-     #   for lab, feat in zip(json_label, json_feature):
-      #      trainer.append(feat, lab)
+        for tr_set in get_filenames(train_set):
+            tr_label, tr_feature, _ = load_transform_dataset(train_set, params, merge)
+            for lab, feat in zip(tr_label, tr_feature):
+                trainer.append(feat, lab)
         trainer.train(model+'.crfmodel')
         tagger = pycrfsuite.Tagger()
         tagger.open(model+'.crfmodel')
