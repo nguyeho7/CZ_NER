@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 from src.common.NER_utils import transform_dataset 
 from src.common.NER_utils import dump_POS_tags
-from src.common.NER_utils import load_dataset, load_dataset_json
-from src.common.eval import global_eval, output_evaluation
+from src.common.NER_utils import load_transform_dataset
+from src.common.eval import global_eval, output_evaluation, random_sample
 import argparse
 import pycrfsuite
 import sys 
@@ -31,67 +31,48 @@ def parse_args():
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-t", "--train", action="store_true")
     group.add_argument("-p", "--predict", action="store_true")
-    group.add_argument("--entity", action="store_true")
-    parser.add_argument('--json', help="load eval set from json instead", action="store_true")
     parser.add_argument('train_set', help='train set filename')
     parser.add_argument('test_set', help='test set filename')
     parser.add_argument('models', help='models filename')
     parser.add_argument('merge', help='BIO|supertype|none')
     return parser.parse_args()
 
-def entity_linking_tr_eval(train_set, test_set, models, merge):
-    for model, params in models:
-        trainer = pycrfsuite.Trainer(verbose=True)
-        tr_label, tr_feature = load_dataset_json(train_set, params)
-        te_label, te_feature = load_dataset_json(test_set, params) 
-        trainer.train(model+'.crfmodel')
-        tagger = pycrfsuite.Tagger()
-        tagger.open(model+'.crfmodel')
-        predictions = [tagger.tag(sentence) for sentence in te_feature]
-        evaluations = global_eval(predictions, te_label)
-        output_evaluation(*evaluations, model_name=model)
-
-def predict_and_eval(models, filename, merge, json=False):
-    if not json:
-        te_raw = load_dataset(filename)
+def predict_and_eval(models, filename, merge):
     for model, params in models:
         tagger = pycrfsuite.Tagger()
         tagger.open(model+".crfmodel")
-        if json:
-            labels, features = load_transform_dataset_json(filename, params)
-        else:
-            labels, features = transform_dataset(te_raw, params, merge)
-        text = [[w[0][5:] for w in sentence] for sentence in features]
+        labels, features, text = load_transform_dataset(filename, params, merge)
         predictions = [tagger.tag(sentence) for sentence in features]
         evaluations = global_eval(predictions, labels)
         output_evaluation(*evaluations, model_name=model)
+        random_sample("sentences_50_predict_cnec", text, predictions, labels, 50)
 
 def train_and_eval(models, train_set, test_set, merge):
     for model, params in models:
         trainer = pycrfsuite.Trainer(verbose=True)
-        tr_label, tr_feature = transform_dataset(train_set, params, merge)
-        te_label, te_feature = transform_dataset(test_set, params, merge) 
+        tr_label, tr_feature, _ = load_transform_dataset(train_set, params, merge)
+        te_label, te_feature, text = load_transform_dataset(test_set, params, merge) 
+        json_label, json_feature = load_transform_dataset('named_ent_train.txt', params, merge)
         for lab, feat in zip(tr_label, tr_feature):
+            trainer.append(feat, lab)
+        for lab, feat in zip(json_label, json_feature):
             trainer.append(feat, lab)
         trainer.train(model+'.crfmodel')
         tagger = pycrfsuite.Tagger()
         tagger.open(model+'.crfmodel')
-        text = [[w[0][5:] for w in sentence] for sentence in te_feature]
         predictions = [tagger.tag(sentence) for sentence in te_feature]
         evaluations = global_eval(predictions, te_label)
         output_evaluation(*evaluations, model_name=model)
+        random_sample("sentences_50_train_eval", text, predictions, te_labes, 50)
 
 def main():
     args = parse_args()
     models = parse_commands(args.models) 
     merge = args.merge
     if args.train:
-        tr_raw = load_dataset(args.train_set)
-        te_raw = load_dataset(args.test_set)
-        train_and_eval(models, tr_raw, te_raw, merge)
+        train_and_eval(models, args.train_set, args.test_set, merge)
     elif args.predict:
-        predict_and_eval(models, args.test_set, merge, args.json)
-    elif args.entity:
-        entity_linking_tr_eval(args.train_set, args.test_set, models, merge)
+        predict_and_eval(models, args.test_set, merge)
+
 if __name__ == '__main__':
     main()

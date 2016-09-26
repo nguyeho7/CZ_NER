@@ -16,14 +16,16 @@ def load_dataset(filename="named_ent_dtest.txt"):
 
 def load_dataset_json(filename, params):
     j = json.load(open(filename))
-    sentences = []
+    sentences_features = []
+    sentences_text = []
     y_gold = []
     ft = feature_extractor(params)
     for question in j:
         features = ft.extract_features(question['tokens'])
-        sentences.append(features)
+        sentences_text.append(question['tokens'])
+        sentences_features.append(features)
         y_gold.append(question['entity-labels'])
-    return y_gold, sentences
+    return y_gold, sentences_features, sentences_text
 
 def load_transform_dataset(filename, params, merge):
     """
@@ -264,12 +266,14 @@ def transform_dataset(dataset, params, merge="supertype"):
     '''
     features_list = []
     labels = []
+    sentences = []
     ft = feature_extractor(params)
     for line in dataset:
         tokens, tags = get_labels_tags(line_split(line), merge)
+        sentences.append(tokens)
         labels.append(tags)
         features_list.append(ft.extract_features(tokens))
-    return labels, features_list
+    return labels, features_list, sentences
 
 def save_indices(indices, filename):
     """
