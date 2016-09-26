@@ -55,7 +55,7 @@ def train_and_eval(models, train_set, test_set, merge):
         trainer = pycrfsuite.Trainer(verbose=True)
         te_label, te_feature, text = load_transform_dataset(test_set, params, merge) 
         for tr_set in get_filenames(train_set):
-            tr_label, tr_feature, _ = load_transform_dataset(train_set, params, merge)
+            tr_label, tr_feature, _ = load_transform_dataset(tr_set, params, merge)
             for lab, feat in zip(tr_label, tr_feature):
                 trainer.append(feat, lab)
         trainer.train(model+'.crfmodel')
@@ -64,7 +64,7 @@ def train_and_eval(models, train_set, test_set, merge):
         predictions = [tagger.tag(sentence) for sentence in te_feature]
         evaluations = global_eval(predictions, te_label)
         output_evaluation(*evaluations, model_name=model)
-        random_sample("sentences_50_train_eval", text, predictions, te_labes, 50)
+        random_sample("sentences_50_train_eval", text, predictions, te_labels, 50)
 
 def main():
     args = parse_args()
