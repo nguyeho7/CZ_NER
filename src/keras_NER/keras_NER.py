@@ -32,6 +32,7 @@ def load_embedding_matrix(filename='testmodel-139m_p3___.bin'):
 
 def get_data(filename, indices, tag_indices, validation=False, merge="none"):
     raw_data = t.load_dataset(filename)
+    print("opening ", filename)
     vocab_size = len(indices)
     X_train = []
     Y_train = []
@@ -90,17 +91,22 @@ def vectorize_tags(tags, idx, merge=False):
 def vectorize_sentence(tokens,word_idx):
     result = []
     for token in tokens:
-        tok = token.lower()
+        tok = token
+        #tok = token.lower()
         if tok in word_idx:
             result.append(word_idx[tok])
-        elif tok.isdigit():
-            result.append(1)
-        elif tok in punctuation:
-            result.append(2)
-        elif tok in stopwords:
-            result.append(3)
         else:
-            result.append(4)
+            print(tokens)
+            print("this should not happen")
+            result.append(0)
+    #    elif tok.isdigit():
+     #       result.append(1)
+      #  elif tok in punctuation:
+       #     result.append(2)
+        #elif tok in stopwords:
+         #   result.append(3)
+        #else:
+         #   result.append(4)
     return result
 
 def load_indices(filename):
@@ -129,12 +135,14 @@ def define_model_concat(vocab_size, tags, embeddings,  POS_vectors, feature_vect
     
     merged = merge([embedding_layer, POS_input, feature_input], mode='concat')
     bidir = Bidirectional(LSTM(128, return_sequences=True))(merged)
+    bidir_merged = merge([merged, bidir], mode='concat')
+    bidir_2 = Bidirectional(LSTM(128, return_sequences=True))(bidir_merged)
     time_dist_dense = TimeDistributed(Dense(tags, activation='softmax'))(bidir)
     model = Model(input=[sentence_input, POS_input, feature_input], output=time_dist_dense)
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
     return model
 
-def define_model(vocab_size, tags):
+def define_model_baseline(vocab_size, tags):
     model = Sequential()
     model.add(Embedding(input_dim=vocab_size+1, output_dim=100, input_length=60, mask_zero=True))
     model.add(Bidirectional(LSTM(128, return_sequences=True)))
@@ -168,11 +176,12 @@ def make_predictions(model, x_test, y_test, inverted_indices):
     return y_pred
 
 def main():
-    model_filename = "BIO"
+    model_filename = "BIO_baseline"
     #tag_indices_filename = "tag_indices.json"
     tag_indices_filename = "tag_indices_merged.json"
     merge_type = "BIO" # BIO, none, supertype
-    w2index, embeddings = load_embedding_matrix()
+    #w2index, embeddings = load_embedding_matrix()
+    w2index = load_indices('token_indices.json')
     tag_indices = load_indices(tag_indices_filename)
     inverted_indices = {v: k for k, v in tag_indices.items()}
 
@@ -180,16 +189,15 @@ def main():
     x_val, y_val, POS_val, ft_val, _, _ = get_data('named_ent_dtest.txt', w2index, tag_indices, merge=merge_type)
     x_test, y_test, POS_test, ft_test, test_text, _ = get_data('named_ent_etest.txt', w2index, tag_indices, validation=True, merge=merge_type)
 
-    print("POS SHAPE", POS_train.shape)
-    print("FEATURES SHAPE", ft_train.shape)
-    print("embedd shape", x_train.shape)
+    #model = define_model_concat(vocab_size, len(tag_indices), embeddings, POS_train, ft_train)
+    #train_model(model, [x_train, POS_train, ft_train], y_train, x_val, y_val, model_filename)
 
-    model = define_model_concat(vocab_size, len(tag_indices), embeddings, POS_train, ft_train)
-    train_model(model, [x_train, POS_train, ft_train], y_train, x_val, y_val, model_filename)
-    #model = load_model(model_filename)
-    #y_pred = make_predictions(model, x_test, y_test, inverted_indices)
+    model = define_model_baseline(vocab_size, len(tag_indices))
+    train_model(model, x_train, y_train, x_val, y_val, model_filename)    
+    y_pred = make_predictions(model, x_test, y_test, inverted_indices)
     evaluations = global_eval(y_pred, y_test)
     output_evaluation(*evaluations, model_name=model_filename)
     random_sample("sentences_50", test_text, y_pred, y_test, 50)
+
 if __name__ == '__main__':
     main()
