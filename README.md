@@ -1,5 +1,13 @@
 Named Entity Recognition
 =======
+Named Entity Recognition is recognizing entities (Persons, Organizations, Locations, etc.) in a
+sentence.
+These are two NER projects using the same feature extractor. The first one is based on CRFs
+using CRFsuite and the other is based on RNN's written in Keras. 
+They are meant to be used with the czech named entity recognition corpus,
+(http://ufal.mff.cuni.cz/cnec/cnec2.0), but can also work with a .json format. We plan to include
+loading options for the CONLL2003 dataset as well.
+
 
 CRF_NER
 -------
@@ -7,9 +15,6 @@ This is a NER model evaluator for on conditional random fields. It uses
 pythoncrfsuite and sklearn. It is mainly used to experiment with different 
 features extracted from the dataset and comparing the performance between 
 models.
-
-CRF_NER is meant to be used with the czech named entity recognition corpus,
-(http://ufal.mff.cuni.cz/cnec/cnec2.0)
 
 Setup
 -----
@@ -23,7 +28,6 @@ https://lindat.mff.cuni.cz/repository/xmlui/handle/11858/00-097C-0000-0023-1B22-
 ### Dependencies
 To install the dependencies, use pip
 
-    pip install sklearn
     pip install python-crfsuite
 
 Usage
@@ -58,7 +62,6 @@ Using the same model.txt file, run:
 this will load the models defined in model.txt, extract the same features and run a tagger on the
 test set.
 
-keras_NER
----------
-Named entity recognition using recurrent neural networks written in Keras with Theano backend. This
-is currently highly volatile as we are running all sorts of experiments. 
+Licenses
+--------
+CRFSuite library is licensed under the BSD license, python-crfsuite is licensed under MIT license
