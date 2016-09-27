@@ -17,7 +17,7 @@ The RAM usage (and model size) highly depends on the number of features picked,
 I will add estimates later.
 
 ### Data
-First download the CNEC2.0 dataset from 
+Download the CNEC2.0 dataset from 
 https://lindat.mff.cuni.cz/repository/xmlui/handle/11858/00-097C-0000-0023-1B22-8
 
 ### Dependencies
@@ -39,9 +39,26 @@ Example:
 The first line means the model will extract the label (i.e. the word) and 1
 neighbour to the left and to the right. It will be saved as 1_nbr.crfmodel
 
-Then, with the CNEC2.0 plaintext files in the same folder, simply run:
+### Train
 
-    python CRF_NER.py named_ent_train.txt named_ent_etest.txt model.txt
+With the CNEC2.0 plaintext files in the same folder, simply run:
 
-We plan to add further features to the feature extractor (POS tags, brown
-clusters, gazetteer) and evaluate their performance.
+    python3 -m src.CRF_NER.CRF_NER.py --train named_ent_train.txt named_ent_etest.txt model.txt merge
+
+where merge can be either "BIO", "supertypes" or "none"
+It generates modelname.crfmodel and modelname.log (performance evaluation on test set)
+
+
+### Predict
+
+Using the same model.txt file, run:
+
+    python3 -m src.CRF_NER.CRF_NER.py --predict named_ent_train.txt named_ent_etest.txt model.txt merge
+
+this will load the models defined in model.txt, extract the same features and run a tagger on the
+test set.
+
+keras_NER
+---------
+Named entity recognition using recurrent neural networks written in Keras with Theano backend. This
+is currently highly volatile as we are running all sorts of experiments. 
