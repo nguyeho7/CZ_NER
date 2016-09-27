@@ -188,7 +188,7 @@ def make_predictions(model, x_test, y_test, inverted_indices):
     return y_pred
 
 def main():
-    model_filename = "w2v_first"
+    model_filename = "BIO_2_layer"
     #tag_indices_filename = "tag_indices.json"
     tag_indices_filename = "tag_indices_merged.json"
     merge_type = "BIO" # BIO, none, supertype
@@ -206,10 +206,10 @@ def main():
 
     #model = define_model_w2v(vocab_size, len(tag_indices), embeddings)
     #train_model(model, x_train, y_train, x_val, y_val, model_filename)    
-    #y_pred = make_predictions(model, x_test, y_test, inverted_indices)
-    #evaluations = global_eval(y_pred, y_test)
-    #output_evaluation(*evaluations, model_name=model_filename)
-    #random_sample("sentences_50", test_text, y_pred, y_test, 50)
+    y_pred = make_predictions(model, [x_test, POS_test, ft_test], y_test, inverted_indices)
+    evaluations = global_eval(y_pred, y_test)
+    output_evaluation(*evaluations, model_name=model_filename)
+    random_sample("sentences_50", test_text, y_pred, y_test, 50)
 
 if __name__ == '__main__':
     main()
