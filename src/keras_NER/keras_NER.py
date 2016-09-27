@@ -30,7 +30,7 @@ def load_embedding_matrix(filename='testmodel-139m_p3___.bin', word_list_filenam
         for line in raw_data:
             tokens, tags = t.get_labels_tags(t.line_split(line), "BIO")
             for token in tokens:
-                word_set.add(token)
+                word_set.add(token.lower())
         i = 2
         for token in word_set:
             if token in w:
@@ -139,31 +139,42 @@ def define_model_w2v(vocab_size, tags, embeddings):
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
     return model
 
-def define_model_concat(vocab_size, tags, embeddings,  POS_vectors, feature_vectors):
-    sentence_input = Input(shape=(60,), dtype='int32')
-    embedding_layer = Embedding(input_dim = embeddings.shape[0], output_dim=embeddings.shape[1],
-        weights=[embeddings], input_length=60, mask_zero=True)(sentence_input)
-
-    POS_input = Input(shape=(60, len(pos_index)))
- #   POS_layer = Dense(len(pos_index))(POS_input)
-
-    feature_input = Input(shape=(60, len(feature_functs)))
-#    feature_layer = Dense(len(feature_functs))(feature_input)
-    
-    merged = merge([embedding_layer, POS_input, feature_input], mode='concat')
-    bidir = Bidirectional(LSTM(128, return_sequences=True))(merged)
-    bidir_merged = merge([merged, bidir], mode='concat')
-    bidir_2 = Bidirectional(LSTM(128, return_sequences=True))(bidir_merged)
-    time_dist_dense = TimeDistributed(Dense(tags, activation='softmax'))(bidir)
-    model = Model(input=[sentence_input, POS_input, feature_input], output=time_dist_dense)
-    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
-    return model
-
 def define_model_baseline(vocab_size, tags):
     model = Sequential()
     model.add(Embedding(input_dim=vocab_size+2, output_dim=100, input_length=60, mask_zero=True))
     model.add(Bidirectional(LSTM(128, return_sequences=True)))
     model.add(TimeDistributed(Dense(tags, activation='softmax')))
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
+    return model
+
+def define_model_concat(vocab_size, tags, embeddings,  POS_vectors, feature_vectors):
+    sentence_input = Input(shape=(60,), dtype='int32')
+    embedding_layer = Embedding(input_dim = embeddings.shape[0], output_dim=embeddings.shape[1],
+        weights=[embeddings], input_length=60, mask_zero=True)(sentence_input)
+    POS_input = Input(shape=(60, len(pos_index)))
+ #   POS_layer = Dense(len(pos_index))(POS_input)
+    feature_input = Input(shape=(60, len(feature_functs)))
+#    feature_layer = Dense(len(feature_functs))(feature_input)
+    merged = merge([embedding_layer, POS_input, feature_input], mode='concat')
+    bidir = Bidirectional(LSTM(128, return_sequences=True))(merged)
+    time_dist_dense = TimeDistributed(Dense(tags, activation='softmax'))(bidir)
+    model = Model(input=[sentence_input, POS_input, feature_input], output=time_dist_dense)
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
+    return model
+
+
+def define_model_2_layer(vocab_size, tags, embeddings,  POS_vectors, feature_vectors):
+    sentence_input = Input(shape=(60,), dtype='int32')
+    embedding_layer = Embedding(input_dim = embeddings.shape[0], output_dim=embeddings.shape[1],
+        weights=[embeddings], input_length=60, mask_zero=True)(sentence_input)
+    POS_input = Input(shape=(60, len(pos_index)))
+    feature_input = Input(shape=(60, len(feature_functs)))
+    merged = merge([embedding_layer, POS_input, feature_input], mode='concat')
+    bidir = Bidirectional(LSTM(128, return_sequences=True))(merged)
+    bidir_merged = merge([merged, bidir], mode='concat')
+    bidir_2 = Bidirectional(LSTM(128, return_sequences=True))(bidir_merged)
+    time_dist_dense = TimeDistributed(Dense(tags, activation='softmax'))(bidir_2)
+    model = Model(input=[sentence_input, POS_input, feature_input], output=time_dist_dense)
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
     return model
 
@@ -206,8 +217,8 @@ def main():
     x_val, y_val, POS_val, ft_val, _, _ = get_data('named_ent_dtest.txt', w2index, tag_indices, merge=merge_type)
     x_test, y_test, POS_test, ft_test, test_text, _ = get_data('named_ent_etest.txt', w2index, tag_indices, validation=True, merge=merge_type)
     
-    #model = define_model_concat(vocab_size, len(tag_indices), embeddings, POS_train, ft_train)
-    #train_model(model, [x_train, POS_train, ft_train], y_train, x_val, y_val, model_filename)
+    model = define_model_2_layer(vocab_size, len(tag_indices), embeddings, POS_train, ft_train)
+    train_model(model, [x_train, POS_train, ft_train], y_train, x_val, y_val, model_filename)
 
     #model = define_model_w2v(vocab_size, len(tag_indices), embeddings)
     #train_model(model, x_train, y_train, x_val, y_val, model_filename)    
