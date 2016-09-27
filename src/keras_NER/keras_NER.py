@@ -9,9 +9,6 @@ from string import punctuation
 import numpy as np
 import json
 
-# stopwords are chosen by taking the top20 most common words that were not found in w2v
-stopwords = {'je', 've', 'z', 'v', 'se', 'o', 's', 'si', 'by', 'k', 'i', 'od', 'a', 'to', 'na',
-    'po', 'do', 'u', 'za'}
 pos_index = {"ADJ": 1, "ADP": 2, "ADV": 3, "AUX": 4, "CONJ": 5, "DET": 6, "INTJ": 7, "NOUN": 8, 
         "NUM": 9, "PART": 10, "PRON": 11, "PROPN": 12, "PUNCT": 13, "SCONJ": 14, "SYM": 15, "VERB":15, "X": 16, 'none' : 0}
 feature_functs = ["is_upper", "name", "address"]
