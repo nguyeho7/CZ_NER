@@ -41,20 +41,7 @@ def load_embedding_matrix(filename='testmodel-139m_p3___.bin', word_list_filenam
         sorted_list = sorted(word2index.items(), key=lambda x: x[1])
         embeddings.extend(w[x[0]] for x in sorted_list)
     embeddings_np = np.array(embeddings)
-    print(not_found)
-    print(embeddings_np.shape)
     return word2index, embeddings_np
-
-def create_embeding_matrix(filename, embeddings, word2index):
-    raw_data = t.load_dataset(filename)
-    word_dict = {}
-    new_embeddings = []
-    dim = embeddings.shape[1]
-    new_embeddings.append(np.zeros(dim)) # padding
-    new_embeddings.append(n)
-    for line in raw_data:
-        tokens, tags = t.get_labels_tags(t.line_split(line), "BIO")
-
 
 def get_data(filename, indices, tag_indices, validation=False, merge="none"):
     raw_data = t.load_dataset(filename)
