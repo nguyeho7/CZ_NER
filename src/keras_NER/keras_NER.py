@@ -18,13 +18,11 @@ feature_functs = ["is_upper", "name", "address"]
 
 def load_embedding_matrix(filename='testmodel-139m_p3___.bin'):
     w = Word2Vec.load(filename)
-    word2index = {x : w.vocab[x].index + 5 for x in w.vocab}
+    word2index = {x : w.vocab[x].index + 2 for x in w.vocab}
+    dim = w.layer1_size
     sorted_list = sorted(word2index.items(), key=lambda x: x[1])
     embeddings = []
-    embeddings.append(np.zeros(100)) # padding
-    embeddings.append([np.random.normal() for x in range(100)]) #is_digit 
-    embeddings.append([np.random.normal() for x in range(100)]) #is_punctuation
-    embeddings.append([np.random.normal() for x in range(100)]) #is_stopword 
+    embeddings.append(np.zeros(dim)) # padding
     embeddings.append([np.random.normal() for x in range(100)]) #OOV 
     embeddings.extend(w[x[0]] for x in sorted_list)
     embeddings_np = np.array(embeddings)
@@ -32,7 +30,6 @@ def load_embedding_matrix(filename='testmodel-139m_p3___.bin'):
 
 def get_data(filename, indices, tag_indices, validation=False, merge="none"):
     raw_data = t.load_dataset(filename)
-    print("opening ", filename)
     vocab_size = len(indices)
     X_train = []
     Y_train = []
@@ -91,22 +88,11 @@ def vectorize_tags(tags, idx, merge=False):
 def vectorize_sentence(tokens,word_idx):
     result = []
     for token in tokens:
-        tok = token
-        #tok = token.lower()
+        tok = token.lower()
         if tok in word_idx:
             result.append(word_idx[tok])
         else:
-            print(tokens)
-            print("this should not happen")
-            result.append(0)
-    #    elif tok.isdigit():
-     #       result.append(1)
-      #  elif tok in punctuation:
-       #     result.append(2)
-        #elif tok in stopwords:
-         #   result.append(3)
-        #else:
-         #   result.append(4)
+            result.append(1)
     return result
 
 def load_indices(filename):
@@ -144,14 +130,14 @@ def define_model_concat(vocab_size, tags, embeddings,  POS_vectors, feature_vect
 
 def define_model_baseline(vocab_size, tags):
     model = Sequential()
-    model.add(Embedding(input_dim=vocab_size+1, output_dim=100, input_length=60, mask_zero=True))
+    model.add(Embedding(input_dim=vocab_size+2, output_dim=100, input_length=60, mask_zero=True))
     model.add(Bidirectional(LSTM(128, return_sequences=True)))
     model.add(TimeDistributed(Dense(tags, activation='softmax')))
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
     return model
 
 def train_model(model, x_train, y_train, x_val, y_val, filename):
-    model.fit(x_train,y_train, nb_epoch=7,  batch_size=40, validation_data=(x_val, y_val))
+    model.fit(x_train,y_train, nb_epoch=10,  batch_size=80, validation_data=(x_val, y_val))
     model.save_weights(filename+".h5") 
     with open(filename+".json", "w") as f:
         f.write(model.to_json())
@@ -176,11 +162,11 @@ def make_predictions(model, x_test, y_test, inverted_indices):
     return y_pred
 
 def main():
-    model_filename = "BIO_baseline"
+    model_filename = "w2v_first"
     #tag_indices_filename = "tag_indices.json"
     tag_indices_filename = "tag_indices_merged.json"
     merge_type = "BIO" # BIO, none, supertype
-    #w2index, embeddings = load_embedding_matrix()
+    w2index, embeddings = load_embedding_matrix()
     w2index = load_indices('token_indices.json')
     tag_indices = load_indices(tag_indices_filename)
     inverted_indices = {v: k for k, v in tag_indices.items()}
@@ -188,11 +174,11 @@ def main():
     x_train, y_train, POS_train, ft_train ,_,  vocab_size = get_data('named_ent_train.txt', w2index, tag_indices, merge=merge_type)
     x_val, y_val, POS_val, ft_val, _, _ = get_data('named_ent_dtest.txt', w2index, tag_indices, merge=merge_type)
     x_test, y_test, POS_test, ft_test, test_text, _ = get_data('named_ent_etest.txt', w2index, tag_indices, validation=True, merge=merge_type)
-
+    
     #model = define_model_concat(vocab_size, len(tag_indices), embeddings, POS_train, ft_train)
     #train_model(model, [x_train, POS_train, ft_train], y_train, x_val, y_val, model_filename)
 
-    model = define_model_baseline(vocab_size, len(tag_indices))
+    model = define_model_w2v(vocab_size, len(tag_indices), embeddings)
     train_model(model, x_train, y_train, x_val, y_val, model_filename)    
     y_pred = make_predictions(model, x_test, y_test, inverted_indices)
     evaluations = global_eval(y_pred, y_test)
