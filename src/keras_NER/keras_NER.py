@@ -16,17 +16,48 @@ pos_index = {"ADJ": 1, "ADP": 2, "ADV": 3, "AUX": 4, "CONJ": 5, "DET": 6, "INTJ"
         "NUM": 9, "PART": 10, "PRON": 11, "PROPN": 12, "PUNCT": 13, "SCONJ": 14, "SYM": 15, "VERB":15, "X": 16, 'none' : 0}
 feature_functs = ["is_upper", "name", "address"]
 
-def load_embedding_matrix(filename='testmodel-139m_p3___.bin'):
+def load_embedding_matrix(filename='testmodel-139m_p3___.bin', word_list_filename='none'):
     w = Word2Vec.load(filename)
-    word2index = {x : w.vocab[x].index + 2 for x in w.vocab}
     dim = w.layer1_size
-    sorted_list = sorted(word2index.items(), key=lambda x: x[1])
     embeddings = []
     embeddings.append(np.zeros(dim)) # padding
-    embeddings.append([np.random.normal() for x in range(100)]) #OOV 
-    embeddings.extend(w[x[0]] for x in sorted_list)
+    embeddings.append([np.random.normal() for x in range(dim)]) #OOV 
+    not_found = 0
+    if word_list_filename != 'none':
+        word2index = {}
+        raw_data = t.load_dataset(word_list_filename)
+        word_set = set()
+        for line in raw_data:
+            tokens, tags = t.get_labels_tags(t.line_split(line), "BIO")
+            for token in tokens:
+                word_set.add(token)
+        i = 2
+        for token in word_set:
+            if token in w:
+                embeddings.append(w[token])
+                word2index.update({token: i})
+                i += 1
+            else:
+                not_found += 1
+    else:
+        word2index = {x : w.vocab[x].index + 2 for x in w.vocab}
+        sorted_list = sorted(word2index.items(), key=lambda x: x[1])
+        embeddings.extend(w[x[0]] for x in sorted_list)
     embeddings_np = np.array(embeddings)
+    print(not_found)
+    print(embeddings_np.shape)
     return word2index, embeddings_np
+
+def create_embeding_matrix(filename, embeddings, word2index):
+    raw_data = t.load_dataset(filename)
+    word_dict = {}
+    new_embeddings = []
+    dim = embeddings.shape[1]
+    new_embeddings.append(np.zeros(dim)) # padding
+    new_embeddings.append(n)
+    for line in raw_data:
+        tokens, tags = t.get_labels_tags(t.line_split(line), "BIO")
+
 
 def get_data(filename, indices, tag_indices, validation=False, merge="none"):
     raw_data = t.load_dataset(filename)
@@ -166,7 +197,7 @@ def main():
     #tag_indices_filename = "tag_indices.json"
     tag_indices_filename = "tag_indices_merged.json"
     merge_type = "BIO" # BIO, none, supertype
-    w2index, embeddings = load_embedding_matrix()
+    w2index, embeddings = load_embedding_matrix("d300w5_10p_ft_skipgram", "named_ent.txt")
     w2index = load_indices('token_indices.json')
     tag_indices = load_indices(tag_indices_filename)
     inverted_indices = {v: k for k, v in tag_indices.items()}
@@ -178,12 +209,12 @@ def main():
     #model = define_model_concat(vocab_size, len(tag_indices), embeddings, POS_train, ft_train)
     #train_model(model, [x_train, POS_train, ft_train], y_train, x_val, y_val, model_filename)
 
-    model = define_model_w2v(vocab_size, len(tag_indices), embeddings)
-    train_model(model, x_train, y_train, x_val, y_val, model_filename)    
-    y_pred = make_predictions(model, x_test, y_test, inverted_indices)
-    evaluations = global_eval(y_pred, y_test)
-    output_evaluation(*evaluations, model_name=model_filename)
-    random_sample("sentences_50", test_text, y_pred, y_test, 50)
+    #model = define_model_w2v(vocab_size, len(tag_indices), embeddings)
+    #train_model(model, x_train, y_train, x_val, y_val, model_filename)    
+    #y_pred = make_predictions(model, x_test, y_test, inverted_indices)
+    #evaluations = global_eval(y_pred, y_test)
+    #output_evaluation(*evaluations, model_name=model_filename)
+    #random_sample("sentences_50", test_text, y_pred, y_test, 50)
 
 if __name__ == '__main__':
     main()
