@@ -31,31 +31,24 @@ def load_embedding_matrix(filename='testmodel-139m_p3___.bin'):
     return word2index, embeddings_np
 
 def get_data(filename, indices, tag_indices, validation=False, merge="none"):
-    raw_data = t.load_dataset(filename)
-    print("opening ", filename)
     vocab_size = len(indices)
     X_train = []
     Y_train = []
-    text = []
-    ft_params = ['POS_curr', 'POS_final.json', "is_capitalised", 'addr_gzttr', 'adresy.txt',
+    ft_params = ['label','POS_curr', 'POS_final.json', "is_capitalised", 'addr_gzttr', 'adresy.txt',
             'name_gzttr','czech_names']
-    ft = t.feature_extractor(ft_params)
     feature_list = []
     POS = []
-    for line in raw_data:
-        if len(line) == 0:
-            continue
-        tokens, tags = t.get_labels_tags(t.line_split(line), merge)
-        features = ft.extract_features(tokens, string_format=False)
-        POS.append(vectorize_POS(features))
-        feature_list.append(vectorize_features(features))
-        text.append(tokens)
-        tokens_vector= vectorize_sentence(tokens, indices)
-        X_train.append(tokens_vector)
+    y_gold, sentences_features, sentences_text = t.load_transform_dataset(filename, ft_params, merge, str_format = False)
+    for sentence in sentences_text:
+        X_train.append(vectorize_sentence(sentence, indices))
+    for tags in y_gold:
         if validation:
             Y_train.append(tags[:60])
         else:
             Y_train.append(vectorize_tags(tags, tag_indices))
+    for features in sentences_features:
+        POS.append(vectorize_POS(features))
+        feature_list.append(vectorize_features(features))  
     x_train = pad_sequences(np.array(X_train), maxlen=60)
     if validation:
         y_train = np.array(Y_train)
@@ -63,7 +56,7 @@ def get_data(filename, indices, tag_indices, validation=False, merge="none"):
         y_train = pad_sequences(np.array(Y_train), maxlen=60)
     POS_np = pad_sequences(np.array(POS), maxlen=60)
     feature_list_np = pad_sequences(np.array(feature_list), maxlen=60)
-    return x_train, y_train, POS_np, feature_list_np, text, vocab_size
+    return x_train, y_train, POS_np, feature_list_np, sentences_text, vocab_size
 
 def vectorize_POS(features):
     result = [[0 for x in range(len(pos_index))] for y in range(len(features))]
@@ -96,17 +89,7 @@ def vectorize_sentence(tokens,word_idx):
         if tok in word_idx:
             result.append(word_idx[tok])
         else:
-            print(tokens)
-            print("this should not happen")
-            result.append(0)
-    #    elif tok.isdigit():
-     #       result.append(1)
-      #  elif tok in punctuation:
-       #     result.append(2)
-        #elif tok in stopwords:
-         #   result.append(3)
-        #else:
-         #   result.append(4)
+            result.append(1)
     return result
 
 def load_indices(filename):
@@ -144,7 +127,7 @@ def define_model_concat(vocab_size, tags, embeddings,  POS_vectors, feature_vect
 
 def define_model_baseline(vocab_size, tags):
     model = Sequential()
-    model.add(Embedding(input_dim=vocab_size+1, output_dim=100, input_length=60, mask_zero=True))
+    model.add(Embedding(input_dim=vocab_size+2, output_dim=100, input_length=60, mask_zero=True))
     model.add(Bidirectional(LSTM(128, return_sequences=True)))
     model.add(TimeDistributed(Dense(tags, activation='softmax')))
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
@@ -170,16 +153,15 @@ def make_predictions(model, x_test, y_test, inverted_indices):
         length = len(y_test[k])
         for word in sentence[-length:]: 
             sentence_list.append(inverted_indices[word])
-        print(len(sentence_list), len(y_test[k]))
         assert len(sentence_list) == len(y_test[k])
         y_pred.append(sentence_list)
     return y_pred
 
 def main():
-    model_filename = "BIO_baseline"
-    #tag_indices_filename = "tag_indices.json"
-    tag_indices_filename = "tag_indices_merged.json"
-    merge_type = "BIO" # BIO, none, supertype
+    model_filename = "supertype_baseline"
+    tag_indices_filename = "tag_indices.json"
+    #tag_indices_filename = "tag_indices_merged.json"
+    merge_type = "supertype" # BIO, none, supertype
     #w2index, embeddings = load_embedding_matrix()
     w2index = load_indices('token_indices.json')
     tag_indices = load_indices(tag_indices_filename)
@@ -188,12 +170,14 @@ def main():
     x_train, y_train, POS_train, ft_train ,_,  vocab_size = get_data('named_ent_train.txt', w2index, tag_indices, merge=merge_type)
     x_val, y_val, POS_val, ft_val, _, _ = get_data('named_ent_dtest.txt', w2index, tag_indices, merge=merge_type)
     x_test, y_test, POS_test, ft_test, test_text, _ = get_data('named_ent_etest.txt', w2index, tag_indices, validation=True, merge=merge_type)
-
     #model = define_model_concat(vocab_size, len(tag_indices), embeddings, POS_train, ft_train)
-    #train_model(model, [x_train, POS_train, ft_train], y_train, x_val, y_val, model_filename)
+    #train_model(model, [x_train, POS_train, ft_train], y_train, [x_val, POS_val, ft_val], y_val, model_filename)
+    #y_pred = make_predictions(model, [x_test, POS_test, ft_test], y_test, inverted_indices)
 
-    model = define_model_baseline(vocab_size, len(tag_indices))
-    train_model(model, x_train, y_train, x_val, y_val, model_filename)    
+    #model = define_model_baseline(vocab_size, len(tag_indices))
+    model = load_model(model_filename)
+    #train_model(model, x_train, y_train, x_val, y_val, model_filename)    
+    
     y_pred = make_predictions(model, x_test, y_test, inverted_indices)
     evaluations = global_eval(y_pred, y_test)
     output_evaluation(*evaluations, model_name=model_filename)
