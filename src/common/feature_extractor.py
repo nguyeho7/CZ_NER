@@ -261,6 +261,14 @@ class feature_extractor:
         else:
             return "POS[-1]|POS[0]", self.POS_tags[tokens[i-1]] + "|START" 
 
+    def ft_bclusters_4(self, *params):
+        token = params[0]
+        return "BC_4", self.clusters[token.lower()][:4]
+
+    def ft_bclusters_6(self, *params):
+        token = params[0]
+        return "BC_4", self.clusters[token.lower()][:4]
+
     def ft_bclusters_8(self, *params, init=False):
         if init:
             self._load_clusters(params[0])
@@ -274,6 +282,10 @@ class feature_extractor:
     def ft_bclusters_16(self, *params):
         token = params[0]
         return "BC_16", self.clusters[token.lower()][:16]
+
+    def ft_bclusters_20(self, *params):
+        token = params[0]
+        return "BC_20", self.clusters[token.lower()][:20]
 
     def _load_clusters(self, filename):
         with open(filename) as f:
