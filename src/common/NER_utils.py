@@ -14,20 +14,46 @@ def load_dataset(filename="named_ent_dtest.txt"):
     with open(filename) as f:
         return f.read().split('\n')
 
-def load_dataset_json(filename, params):
+def load_dataset_json(filename, params, str_format):
     j = json.load(open(filename))
     sentences_features = []
     sentences_text = []
     y_gold = []
     ft = feature_extractor(params)
     for question in j:
-        features = ft.extract_features(question['tokens'])
+        features = ft.extract_features(question['tokens'], string_format=str_format)
         sentences_text.append(question['tokens'])
         sentences_features.append(features)
         y_gold.append(question['entity-labels'])
     return y_gold, sentences_features, sentences_text
 
-def load_transform_dataset(filename, params, merge):
+def transform_dataset_conll(dataset, params, str_format):
+    sentences_text = []
+    features = []
+    tags = []
+    ft = feature_extractor(params)
+    current_sentence = []
+    current_sentence_tags = []
+    for line in dataset:
+        if len(line) == 0:
+            continue
+        data = line.split(' ')
+        if len(data) < 2:
+            print(current_sentence)
+            sentences_text.append(current_sentence)
+            features.append(ft.extract_features(current_sentence, string_format = str_format))
+            tags.append(current_sentence_tags)
+            current_sentence = []
+            current_sentence_tags = []
+        else:
+            token = data[0]
+            tag = data[1]
+            current_sentence.append(token)
+            current_sentence_tags.append(tag)
+    return tags, features, sentences_text
+    
+
+def load_transform_dataset(filename, params, merge, str_format):
     """
     Loads and transforms given dataset, will distinguish between txt (CNEC2.0) and .json (internal
     entity linking benchmark) formats
@@ -36,9 +62,11 @@ def load_transform_dataset(filename, params, merge):
     returns correct_labels, features 
     """
     if filename.endswith(".json"):
-        return load_dataset_json(filename, params) #merge is "BIO" by default
+        return load_dataset_json(filename, params, str_format) #merge is "BIO" by default
+    elif filename.endswith('.conll'):
+        return transform_dataset_conll(load_dataset(filename), params, str_format) #can't merge here
     else:
-        return transform_dataset(load_dataset(filename), params, merge)
+        return transform_dataset(load_dataset(filename), params, merge, str_format)
 
 def line_split(line):
     '''
@@ -249,7 +277,7 @@ def dump_POS_tags_2(dataset, filename):
             tags_per_sentence.update({sentence: {x[1] : x[3] for x in tags[start:end]}})
             start = end
     with open(filename, "w") as f:
-        f.write(json.dumps(tags_per_sentence))
+        f.write(json.dumps(tags_per_sentence, ensure_ascii=False))
 
 def merge_POS_tags(filename1, filename2, output_filename):
     with open(filename1) as f:
@@ -260,7 +288,7 @@ def merge_POS_tags(filename1, filename2, output_filename):
         out.write(json.dumps(merged_dict, ensure_ascii=False))
 
 
-def transform_dataset(dataset, params, merge="supertype"):
+def transform_dataset(dataset, params, merge="supertype", str_format = False):
     '''
     Transforms the cnec2.0 dataset into a format usable by pythoncrfsuite
     '''
@@ -269,10 +297,12 @@ def transform_dataset(dataset, params, merge="supertype"):
     sentences = []
     ft = feature_extractor(params)
     for line in dataset:
+        if len(line) == 0:
+            continue
         tokens, tags = get_labels_tags(line_split(line), merge)
         sentences.append(tokens)
         labels.append(tags)
-        features_list.append(ft.extract_features(tokens))
+        features_list.append(ft.extract_features(tokens, string_format=str_format))
     return labels, features_list, sentences
 
 def save_indices(indices, filename):
