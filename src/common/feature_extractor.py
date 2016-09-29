@@ -2,7 +2,7 @@
 import requests
 import json
 from collections import defaultdict
-
+from czech_stemmer import cz_stem
 class feature_extractor:
     '''
     Extracts the features from the given sentence, can be extended by appending more features to the result list
@@ -38,13 +38,16 @@ class feature_extractor:
                      'prefix_2': self.ft_get_prefix_2,
                      'prefix_3': self.ft_get_prefix_3,
                      'conditional_prev_1': self.ft_conditional_prev_1,
+                     'clusters_4': self.ft_bclusters_4,
                      'clusters_8': self.ft_bclusters_8,
                      'clusters_12': self.ft_bclusters_12,
                      'clusters_16': self.ft_bclusters_16,
+                     'clusters_20': self.ft_bclusters_20,
                      'get_type': self.ft_get_type,
                      'addr_gzttr': self.ft_addr_gzttr,
-                     'name_gzttr': self.ft_name_gzttr}
-        external_functs = {'addr_gzttr', 'name_gzttr', 'POS_curr', 'clusters_8'}
+                     'name_gzttr': self.ft_name_gzttr
+                     'lname_gzttr': self.ft_lname_gzttr}
+        external_functs = {'addr_gzttr', 'name_gzttr', 'POS_curr', 'clusters_8', 'lname_gzttr'}
         self.functions = []
         self.POS_dict = {}
         self.POS_tags = {}
@@ -298,27 +301,39 @@ class feature_extractor:
             self._load_name_gzttr(params[0])
             return
         token = params[0]
-        flag = token in self.name_gzttr
+        flag = cz_stem(token) in self.name_gzttr
         return "name", flag
 
     def _load_name_gzttr(self, filename):
         self.name_gzttr =  set()
         with open(filename) as f:
             for l in f:
-                self.name_gzttr.add(l)
+                self.name_gzttr.add(cz_stem(l.strip()))
 
     def ft_addr_gzttr(self, *params,init=False):
         if init:
             self._load_addr_gzttr(params[0])
             return
         token = params[0]
-        flag = token in self.addr_gzttr
+        flag = cz_stem(token) in self.addr_gzttr
         return "address", flag
 
     def _load_addr_gzttr(self, filename):
         self.addr_gzttr =  set()
         with open(filename) as f:
             for l in f:
-                self.addr_gzttr.add(l)
+                self.addr_gzttr.add(cz_stem(l.strip()))
 
+    def ft_lname_gzttr(self, *params, init=False):
+        if init:
+            self._load_lname_gzttr(params[0])
+            return
+        token = params[0]
+        flag = token in self.lname_gzttr
+        return "last_name", flag
 
+    def _load_lname_gzttr(self, filename):
+        self.lname_gzttr =  set()
+        with open(filename) as f:
+            for l in f:
+                self.lname_gzttr.add(l)
