@@ -45,7 +45,7 @@ class feature_extractor:
                      'clusters_20': self.ft_bclusters_20,
                      'get_type': self.ft_get_type,
                      'addr_gzttr': self.ft_addr_gzttr,
-                     'name_gzttr': self.ft_name_gzttr
+                     'name_gzttr': self.ft_name_gzttr,
                      'lname_gzttr': self.ft_lname_gzttr}
         external_functs = {'addr_gzttr', 'name_gzttr', 'POS_curr', 'clusters_8', 'lname_gzttr'}
         self.functions = []
