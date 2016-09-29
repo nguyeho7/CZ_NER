@@ -126,11 +126,11 @@ class feature_extractor:
 
     def ft_get_suffix_2(self, *params):
         token = params[0]
-        return "suffix_2", token[:-2]
+        return "suffix_2", token[-2:]
 
     def ft_get_suffix_3(self, *params):
         token = params[0]
-        return "suffix_3",token[:-3]
+        return "suffix_3",token[-3:]
 
     def ft_conditional_prev_1(self, *params):
         token, i, tokens = params
