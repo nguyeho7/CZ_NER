@@ -35,6 +35,8 @@ class feature_extractor:
                      'POS_cond': self.ft_POS_cond,
                      'suffix_2': self.ft_get_suffix_2,
                      'suffix_3': self.ft_get_suffix_3,
+                     'prefix_2': self.ft_get_prefix_2,
+                     'prefix_3': self.ft_get_prefix_3,
                      'conditional_prev_1': self.ft_conditional_prev_1,
                      'clusters_8': self.ft_bclusters_8,
                      'clusters_12': self.ft_bclusters_12,
@@ -131,6 +133,14 @@ class feature_extractor:
     def ft_get_suffix_3(self, *params):
         token = params[0]
         return "suffix_3",token[-3:]
+
+    def ft_get_prefix_2(self, *params):
+        token = params[0]
+        return "prefix_2",token[2:]
+
+    def ft_get_prefix_3(self, *params):
+        token = params[0]
+        return "prefix_3",token[3:]
 
     def ft_conditional_prev_1(self, *params):
         token, i, tokens = params
