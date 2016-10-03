@@ -327,9 +327,12 @@ class feature_extractor:
     def ft_lname_gzttr(self, *params, init=False):
         if init:
             self._load_lname_gzttr(params[0])
+            print("loaded lname gzzttr", len(self.lname_gzttr))
             return
         token = params[0]
         flag = token in self.lname_gzttr
+        if flag:
+            print(token, "found in last_name")
         return "last_name", flag
 
     def _load_lname_gzttr(self, filename):
