@@ -46,7 +46,10 @@ class feature_extractor:
                      'get_type': self.ft_get_type,
                      'addr_gzttr': self.ft_addr_gzttr,
                      'name_gzttr': self.ft_name_gzttr,
-                     'lname_gzttr': self.ft_lname_gzttr}
+                     'lname_gzttr': self.ft_lname_gzttr,
+                     'contains_at': self.ft_contains_at,
+                     'contains_digit': self.ft_contains_digit}
+
         external_functs = {'addr_gzttr', 'name_gzttr', 'POS_curr', 'clusters_8', 'lname_gzttr'}
         self.functions = []
         self.POS_dict = {}
@@ -151,6 +154,16 @@ class feature_extractor:
             return token, "|START"
         else:
             return token, "|"+tokens[i-1]
+
+    def ft_contains_at(self, *params):
+        token = params[0]
+        flag = "@" in token
+        return "at", flag
+
+    def ft_contains_digit(self, *params):
+        token = params[0]
+        flag = any(char.isdigit() for char in token)
+        return "contains_digit", flag
 
     def ft_get_type(self, *params):
         token = params[0]
@@ -308,35 +321,35 @@ class feature_extractor:
         self.name_gzttr =  set()
         with open(filename) as f:
             for l in f:
-                self.name_gzttr.add(cz_stem(l.strip()))
+                self.name_gzttr.add(l.strip())
 
     def ft_addr_gzttr(self, *params,init=False):
         if init:
             self._load_addr_gzttr(params[0])
             return
         token = params[0]
-        flag = cz_stem(token) in self.addr_gzttr
+        flag = token in self.addr_gzttr
         return "address", flag
 
     def _load_addr_gzttr(self, filename):
         self.addr_gzttr =  set()
         with open(filename) as f:
             for l in f:
-                self.addr_gzttr.add(cz_stem(l.strip()))
+                token = l.strip()
+                if token.isdigit():
+                    continue
+                self.addr_gzttr.add(token.title())
 
     def ft_lname_gzttr(self, *params, init=False):
         if init:
             self._load_lname_gzttr(params[0])
-            print("loaded lname gzzttr", len(self.lname_gzttr))
             return
         token = params[0]
         flag = token in self.lname_gzttr
-        if flag:
-            print(token, "found in last_name")
         return "last_name", flag
 
     def _load_lname_gzttr(self, filename):
         self.lname_gzttr =  set()
         with open(filename) as f:
             for l in f:
-                self.lname_gzttr.add(l)
+                self.lname_gzttr.add(l.strip())
