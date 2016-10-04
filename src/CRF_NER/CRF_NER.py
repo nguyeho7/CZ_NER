@@ -41,7 +41,7 @@ def predict_and_eval(models, filename, merge):
     for model, params in models:
         tagger = pycrfsuite.Tagger()
         tagger.open(model+".crfmodel")
-        labels, features, text = load_transform_dataset(filename, params, merge)
+        labels, features, text = load_transform_dataset(filename, params, merge,str_format = True)
         predictions = [tagger.tag(sentence) for sentence in features]
         evaluations = global_eval(predictions, labels)
         output_evaluation(*evaluations, model_name=model)
@@ -53,9 +53,9 @@ def get_filenames(train_set):
 def train_and_eval(models, train_set, test_set, merge):
     for model, params in models:
         trainer = pycrfsuite.Trainer(verbose=True)
-        te_label, te_feature, text = load_transform_dataset(test_set, params, merge) 
+        te_label, te_feature, text = load_transform_dataset(test_set, params, merge, str_format=False) 
         for tr_set in get_filenames(train_set):
-            tr_label, tr_feature, _ = load_transform_dataset(tr_set, params, merge)
+            tr_label, tr_feature, _ = load_transform_dataset(tr_set, params, merge, str_format=False)
             for lab, feat in zip(tr_label, tr_feature):
                 trainer.append(feat, lab)
         trainer.train(model+'.crfmodel')
