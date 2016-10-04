@@ -64,7 +64,7 @@ def train_and_eval(models, train_set, test_set, merge):
         predictions = [tagger.tag(sentence) for sentence in te_feature]
         evaluations = global_eval(predictions, te_label)
         output_evaluation(*evaluations, model_name=model)
-        random_sample("sentences_50_train_eval", text, predictions, te_labels, 50)
+        random_sample("sentences_50_train_eval", text, predictions, te_label, 50)
 
 def main():
     args = parse_args()
