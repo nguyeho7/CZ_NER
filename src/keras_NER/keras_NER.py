@@ -11,7 +11,7 @@ import json
 
 pos_index = {"ADJ": 1, "ADP": 2, "ADV": 3, "AUX": 4, "CONJ": 5, "DET": 6, "INTJ": 7, "NOUN": 8, 
         "NUM": 9, "PART": 10, "PRON": 11, "PROPN": 12, "PUNCT": 13, "SCONJ": 14, "SYM": 15, "VERB":15, "X": 16, 'none' : 0}
-feature_functs = ["is_upper", "name", "address"]
+feature_functs = ["is_upper", "name", "address", "last_name", "at", "contains_digit"]
 
 def load_embedding_matrix(filename='testmodel-139m_p3___.bin', word_list_filename='none'):
     w = Word2Vec.load(filename)
@@ -43,12 +43,18 @@ def load_embedding_matrix(filename='testmodel-139m_p3___.bin', word_list_filenam
     embeddings_np = np.array(embeddings)
     return word2index, embeddings_np
 
+def load_embedding_subset(subset_filename, tags_filename):
+    embeddings = np.load(subset_filename)
+    indices = load_indices(tags_filename)
+    return embeddings, indices
+
 def get_data(filename, indices, tag_indices, validation=False, merge="none"):
     vocab_size = len(indices)
     X_train = []
     Y_train = []
     ft_params = ['label','POS_curr', 'POS_final.json', "is_capitalised", 'addr_gzttr', 'adresy.txt',
-            'name_gzttr','czech_names']
+            'name_gzttr','czech_names', 'lname_gzttr', "czech_last_names",'contains_at',
+            'contains_digit']
     feature_list = []
     POS = []
     y_gold, sentences_features, sentences_text = t.load_transform_dataset(filename, ft_params, merge, str_format = False)
@@ -80,7 +86,7 @@ def vectorize_POS(features):
 def vectorize_features(features):
     #for every feature apart from POS tags
     # list of features:
-    # is_capitalised, addr_gzttr, name_gzttr
+    # is_capitalised, addr_gzttr, name_gzttr, contains_at, contains_digit
     result = [[0 for x in range(len(feature_functs))] for y in range(len(features))]
     for i, word_ft in enumerate(features):
         for j, ft in enumerate(feature_functs):
@@ -186,13 +192,16 @@ def make_predictions(model, x_test, y_test, inverted_indices):
     return y_pred
 
 def main():
-    model_filename = "supertype_baseline"
-    tag_indices_filename = "tag_indices.json"
-    #tag_indices_filename = "tag_indices_merged.json"
-    merge_type = "supertype" # BIO, none, supertype
-    model_filename = "BIO_2_layer"
+    #tag_indices_filename = "tag_indices.json"
+    tag_indices_filename = "tag_indices_merged.json"
+    merge_type = "BIO" # BIO, none, supertype
+    model_filename = "BIO_v2_concat"
     w2index, embeddings = load_embedding_matrix("d300w5_10p_ft_skipgram", "named_ent.txt")
-    w2index = load_indices('token_indices.json')
+    #w2index = load_indices('token_indices.json')
+    #f = open("d300w5_skipgram_subset.np", "wb")
+    #np.save(f, embeddings)
+    json.dump(w2index, open("d300w5_skipgram_indices.json", "w"), ensure_ascii=False)
+    print("DONE")
     tag_indices = load_indices(tag_indices_filename)
     inverted_indices = {v: k for k, v in tag_indices.items()}
 
@@ -201,18 +210,18 @@ def main():
     x_test, y_test, POS_test, ft_test, test_text, _ = get_data('named_ent_etest.txt', w2index, tag_indices, validation=True, merge=merge_type)
     
     #model = load_model(model_filename)
+    print(ft_train.shape)
+    model = define_model_concat(vocab_size, len(tag_indices), embeddings, POS_train, ft_train)
+    train_model(model, [x_train, POS_train, ft_train], y_train, [x_val, POS_val, ft_val], y_val, model_filename)
 
-    #model = define_model_concat(vocab_size, len(tag_indices), embeddings, POS_train, ft_train)
-    #train_model(model, [x_train, POS_train, ft_train], y_train, [x_val, POS_val, ft_val], y_val, model_filename)
-
-    model = define_model_baseline(vocab_size, len(tag_indices))
-    train_model(model, x_train, y_train, x_val, y_val, model_filename)    
+    #model = define_model_baseline(vocab_size, len(tag_indices))
+    #train_model(model, x_train, y_train, x_val, y_val, model_filename)    
     
     #model = define_model_2_layer(vocab_size, len(tag_indices), embeddings, POS_train, ft_train)
     #train_model(model, [x_train, POS_train, ft_train], y_train, [x_val, POS_val, ft_val], y_val, model_filename)
-    #y_pred = make_predictions(model, [x_test, POS_test, ft_test], y_test, inverted_indices)
+    y_pred = make_predictions(model, [x_test, POS_test, ft_test], y_test, inverted_indices)
 
-    y_pred = make_predictions(model, x_test, y_test, inverted_indices)
+    #y_pred = make_predictions(model, x_test, y_test, inverted_indices)
     evaluations = global_eval(y_pred, y_test)
     output_evaluation(*evaluations, model_name=model_filename)
     random_sample("sentences_50", test_text, y_pred, y_test, 50)
