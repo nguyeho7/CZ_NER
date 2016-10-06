@@ -183,6 +183,8 @@ def get_labels_tags(tokens, merge="none"):
         tags = [supertype_tag(tag) for tag in tags]
     elif merge == "BIO":
         tags = [merge_tag(tag) for tag in tags]
+    elif merge == "BILOU":
+        tags = BILOU_merge(tags)
     return words, tags 
 
 def merge_tag(tag):
@@ -197,6 +199,26 @@ def supertype_tag(tag):
     else:
         return tag[0] + "_" + tag[-1]
 
+def BILOU_merge(tags):
+    # simplified BILOU scheme B-X, I, L, U-X, O
+    end = len(tags)
+    result = []
+    for i, tag in enumerate(tags):
+        if tag == 'O':
+            result.append('O')
+        elif tag.endswith('_b'):
+            if i + 1 < end:
+                if tags[i+1].endswith('_i'):
+                    result.append('B-{}'.format(tag[:-2]))
+                else:
+                    result.append('U-{}'.format(tag[:-2]))
+            else:
+                result.append('U-{}'.format(tag[:-2]))
+        elif tag.endswith('_i'):
+            result.append('I')
+        else:
+            print("this should not happen")
+    return result
 
 def expand_NE(token):
     '''
