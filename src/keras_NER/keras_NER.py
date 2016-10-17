@@ -2,7 +2,7 @@
 import src.common.NER_utils as t
 from src.common.eval import global_eval, output_evaluation, random_sample
 from keras.models import Sequential, load_model, model_from_json, Model
-from keras.layers import Input, Embedding, Bidirectional, Merge, TimeDistributed, Dense, LSTM, merge
+from keras.layers import Input, Embedding, Bidirectional, Merge, TimeDistributed, Dense, LSTM, merge, Dropout
 from keras.preprocessing.sequence import pad_sequences
 from gensim.models.word2vec import Word2Vec
 from string import punctuation
@@ -46,7 +46,7 @@ def load_embedding_matrix(filename='testmodel-139m_p3___.bin', word_list_filenam
 def load_embedding_subset(subset_filename, tags_filename):
     embeddings = np.load(subset_filename)
     indices = load_indices(tags_filename)
-    return embeddings, indices
+    return indices, embeddings
 
 def get_data(filename, indices, tag_indices, validation=False, merge="none"):
     vocab_size = len(indices)
@@ -140,7 +140,7 @@ def define_model_concat(vocab_size, tags, embeddings,  POS_vectors, feature_vect
     feature_input = Input(shape=(60, len(feature_functs)))
 #    feature_layer = Dense(len(feature_functs))(feature_input)
     merged = merge([embedding_layer, POS_input, feature_input], mode='concat')
-    bidir = Bidirectional(LSTM(128, return_sequences=True))(merged)
+    bidir = Bidirectional(LSTM(256, return_sequences=True))(merged)
     time_dist_dense = TimeDistributed(Dense(tags, activation='softmax'))(bidir)
     model = Model(input=[sentence_input, POS_input, feature_input], output=time_dist_dense)
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
@@ -151,6 +151,18 @@ def define_model_baseline(vocab_size, tags):
     model.add(Embedding(input_dim=vocab_size+2, output_dim=100, input_length=60, mask_zero=True))
     model.add(Bidirectional(LSTM(128, return_sequences=True)))
     model.add(TimeDistributed(Dense(tags, activation='softmax')))
+
+def define_model_baseline_concat(vocab_size, tags, POS_vectors, feature_vectors):
+    sentence_input = Input(shape=(60,), dtype='int32')
+    embedding_layer = Embedding(input_dim = vocab_size+2, output_dim=300, input_length=60, mask_zero=True)(sentence_input)
+    POS_input = Input(shape=(60, len(pos_index)))
+    feature_input = Input(shape=(60, len(feature_functs)))
+    merged = merge([embedding_layer, POS_input, feature_input], mode='concat')
+    bidir = Bidirectional(LSTM(128, return_sequences=True))(merged)
+    time_dist_dense = TimeDistributed(Dense(tags, activation='softmax'))(bidir)
+    model = Model(input=[sentence_input, POS_input, feature_input], output=time_dist_dense)
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
+    return model
 
 def define_model_2_layer(vocab_size, tags, embeddings,  POS_vectors, feature_vectors):
     sentence_input = Input(shape=(60,), dtype='int32')
@@ -168,7 +180,7 @@ def define_model_2_layer(vocab_size, tags, embeddings,  POS_vectors, feature_vec
     return model
 
 def train_model(model, x_train, y_train, x_val, y_val, filename):
-    model.fit(x_train,y_train, nb_epoch=10,  batch_size=80, validation_data=(x_val, y_val))
+    model.fit(x_train,y_train, nb_epoch=10,  batch_size=160, validation_data=(x_val, y_val))
     model.save_weights(filename+".h5") 
     with open(filename+".json", "w") as f:
         f.write(model.to_json())
@@ -194,14 +206,14 @@ def make_predictions(model, x_test, y_test, inverted_indices):
 def main():
     #tag_indices_filename = "tag_indices.json"
     tag_indices_filename = "tag_indices_merged.json"
-    merge_type = "BIO" # BIO, none, supertype
-    model_filename = "BIO_v2_concat"
-    w2index, embeddings = load_embedding_matrix("d300w5_10p_ft_skipgram", "named_ent.txt")
+    merge_type = "BIO" # BIO, none, supertype, BILOU
+    model_filename = "BIO_embedd_doubled_fixed"
+    #w2index, embeddings = load_embedding_matrix("d300w5_10p_ft_skipgram", "named_ent.txt")
+    #np.save(open('d300w5_skipgram_subset.np', 'bw'), embeddings)
+    #json.dump(w2index, open('d300w5_skipgram_indices.json', 'w'))
+    w2index, embeddings = load_embedding_subset("d300w5_skipgram_subset.np",
+           "d300w5_skipgram_indices.json")
     #w2index = load_indices('token_indices.json')
-    #f = open("d300w5_skipgram_subset.np", "wb")
-    #np.save(f, embeddings)
-    json.dump(w2index, open("d300w5_skipgram_indices.json", "w"), ensure_ascii=False)
-    print("DONE")
     tag_indices = load_indices(tag_indices_filename)
     inverted_indices = {v: k for k, v in tag_indices.items()}
 
@@ -212,13 +224,13 @@ def main():
     #model = load_model(model_filename)
     print(ft_train.shape)
     model = define_model_concat(vocab_size, len(tag_indices), embeddings, POS_train, ft_train)
-    train_model(model, [x_train, POS_train, ft_train], y_train, [x_val, POS_val, ft_val], y_val, model_filename)
+    #train_model(model, [x_train, POS_train, ft_train], y_train, [x_val, POS_val, ft_val], y_val, model_filename)
 
+    #model = define_model_w2v(vocab_size, len(tag_indices), embeddings)
     #model = define_model_baseline(vocab_size, len(tag_indices))
     #train_model(model, x_train, y_train, x_val, y_val, model_filename)    
     
-    #model = define_model_2_layer(vocab_size, len(tag_indices), embeddings, POS_train, ft_train)
-    #train_model(model, [x_train, POS_train, ft_train], y_train, [x_val, POS_val, ft_val], y_val, model_filename)
+    train_model(model, [x_train, POS_train, ft_train], y_train, [x_val, POS_val, ft_val], y_val, model_filename)
     y_pred = make_predictions(model, [x_test, POS_test, ft_test], y_test, inverted_indices)
 
     #y_pred = make_predictions(model, x_test, y_test, inverted_indices)

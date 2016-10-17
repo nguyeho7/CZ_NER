@@ -3,6 +3,9 @@ import requests
 import json
 from collections import defaultdict
 from czech_stemmer import cz_stem
+from ufal.morphodita import *
+
+
 class feature_extractor:
     '''
     Extracts the features from the given sentence, can be extended by appending more features to the result list
@@ -55,6 +58,7 @@ class feature_extractor:
         self.POS_dict = {}
         self.POS_tags = {}
         self.clusters = defaultdict(lambda:'-1')
+        self.morpho = Morpho.load("czech-morfflex-160310.dict")
         function = True
         for param in params:
             if function:
@@ -65,6 +69,13 @@ class feature_extractor:
             if param in external_functs:
                 function = False
         print("i will use following feature functions:", self.functions)
+
+    def lemmatize(self, token):
+        lemmas = TaggedLemmas()
+        print(token)
+        result = self.morpho.analyze(token, self.morpho.GUESSER, lemmas)
+        return {"lemma": lemmas[0].lemma, "raw": self.morpho.rawLemma(lemmas[0].lemma),
+                "tag":lemmas[0].tag}
 
     def extract_features(self, tokens, string_format=True):
         """
@@ -90,6 +101,8 @@ class feature_extractor:
 
     def ft_get_label(self, *params):
         token = params[0]
+        lemmas = self.lemmatize(token)
+        print(lemmas)
         return "w[0]", token
 
     def ft_to_lower(self, *params):
