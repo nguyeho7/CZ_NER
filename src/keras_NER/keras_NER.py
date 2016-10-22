@@ -2,7 +2,7 @@
 import src.common.NER_utils as t
 from src.common.eval import global_eval, output_evaluation, random_sample
 from keras.models import Sequential, load_model, model_from_json, Model
-from keras.layers import Input, Embedding, Bidirectional, Merge, TimeDistributed, Dense, LSTM, merge, Dropout
+from keras.layers import Input, Embedding, Bidirectional, Merge, TimeDistributed, Dense, LSTM,merge, Dropout, Convolution1D, Masking
 from keras.preprocessing.sequence import pad_sequences
 from gensim.models.word2vec import Word2Vec
 from string import punctuation
@@ -146,6 +146,23 @@ def define_model_concat(vocab_size, tags, embeddings,  POS_vectors, feature_vect
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
     return model
 
+def define_model_convolutional(vocab_size, tags, embeddings,  POS_vectors, feature_vectors):
+    sentence_input = Input(shape=(60,), dtype='int32')
+    embedding_layer = Embedding(input_dim = embeddings.shape[0], output_dim=embeddings.shape[1],
+        weights=[embeddings], input_length=60)(sentence_input)
+    POS_input = Input(shape=(60, len(pos_index)))
+    feature_input = Input(shape=(60, len(feature_functs)))
+    cnns = [Convolution1D(filter_length=flt, nb_filter=100, activation="tanh", border_mode='same')(embedding_layer) for flt in
+            [2,3]]
+    masked_embedding =Masking(mask_value=0.0)(embedding_layer) 
+    cnns_merged = merge(cnns, mode='concat')
+    merged = merge([masked_embedding, POS_input, feature_input, cnns_merged], mode='concat')
+    bidir = Bidirectional(LSTM(128, return_sequences=True))(merged)
+    time_dist_dense = TimeDistributed(Dense(tags, activation='softmax'))(bidir)
+    model = Model(input=[sentence_input, POS_input, feature_input], output=time_dist_dense)
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
+    return model
+
 def define_model_baseline(vocab_size, tags):
     model = Sequential()
     model.add(Embedding(input_dim=vocab_size+2, output_dim=100, input_length=60, mask_zero=True))
@@ -189,6 +206,7 @@ def load_model(filename):
     with open(filename+".json") as f:
         model = model_from_json(f.read())
     model.load_weights(filename+".h5")
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
     return model
 
 def make_predictions(model, x_test, y_test, inverted_indices):
@@ -205,9 +223,9 @@ def make_predictions(model, x_test, y_test, inverted_indices):
 
 def main():
     #tag_indices_filename = "tag_indices.json"
-    tag_indices_filename = "tag_indices_merged.json"
-    merge_type = "BIO" # BIO, none, supertype, BILOU
-    model_filename = "BIO_embedd_doubled_fixed"
+    tag_indices_filename = "tag_indices_bilou.json"
+    merge_type = "BILOU" # BIO, none, supertype, BILOU
+    model_filename = "convolutional_v0_bilou"
     #w2index, embeddings = load_embedding_matrix("d300w5_10p_ft_skipgram", "named_ent.txt")
     #np.save(open('d300w5_skipgram_subset.np', 'bw'), embeddings)
     #json.dump(w2index, open('d300w5_skipgram_indices.json', 'w'))
@@ -217,26 +235,29 @@ def main():
     tag_indices = load_indices(tag_indices_filename)
     inverted_indices = {v: k for k, v in tag_indices.items()}
 
-    x_train, y_train, POS_train, ft_train ,_,  vocab_size = get_data('named_ent_train.txt', w2index, tag_indices, merge=merge_type)
+    x_train, y_train, POS_train, ft_train ,_,  vocab_size = get_data('named_ent_train.txt', w2index,
+            tag_indices,merge=merge_type)
     x_val, y_val, POS_val, ft_val, _, _ = get_data('named_ent_dtest.txt', w2index, tag_indices, merge=merge_type)
     x_test, y_test, POS_test, ft_test, test_text, _ = get_data('named_ent_etest.txt', w2index, tag_indices, validation=True, merge=merge_type)
-    
+     
+    _, y_test_2, _, _, _, _ = get_data('named_ent_etest.txt', w2index, tag_indices, validation=True, merge=merge_type)
     #model = load_model(model_filename)
-    print(ft_train.shape)
-    model = define_model_concat(vocab_size, len(tag_indices), embeddings, POS_train, ft_train)
-    #train_model(model, [x_train, POS_train, ft_train], y_train, [x_val, POS_val, ft_val], y_val, model_filename)
-
+    model = define_model_convolutional(vocab_size, len(tag_indices), embeddings, POS_train, ft_train)
+    train_model(model, [x_train, POS_train, ft_train], y_train, [x_val, POS_val, ft_val], y_val, model_filename)
     #model = define_model_w2v(vocab_size, len(tag_indices), embeddings)
     #model = define_model_baseline(vocab_size, len(tag_indices))
-    #train_model(model, x_train, y_train, x_val, y_val, model_filename)    
+    train_model(model, x_train, y_train, x_val, y_val, model_filename)    
     
-    train_model(model, [x_train, POS_train, ft_train], y_train, [x_val, POS_val, ft_val], y_val, model_filename)
     y_pred = make_predictions(model, [x_test, POS_test, ft_test], y_test, inverted_indices)
-
+    train_pred = make_predictions(model, [x_train, POS_train, ft_train], y_train, inverted_indices)
     #y_pred = make_predictions(model, x_test, y_test, inverted_indices)
     evaluations = global_eval(y_pred, y_test)
+    train_eval = global_eval(train_pred, y_train)
+    output_evaluation(*train_eval, model_name=model_filename+"_train")
     output_evaluation(*evaluations, model_name=model_filename)
-    random_sample("sentences_50", test_text, y_pred, y_test, 50)
+    scores = model.evaluate([x_test, POS_test, ft_test], y_test_2)
+    print(scores)
+    random_sample("sentences_50"+model_filename, test_text, y_pred, y_test, 50)
 
 if __name__ == '__main__':
     main()
