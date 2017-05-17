@@ -58,7 +58,7 @@ class feature_extractor:
         self.POS_dict = {}
         self.POS_tags = {}
         self.clusters = defaultdict(lambda:'-1')
-        self.morpho = Morpho.load("czech-morfflex-160310.dict")
+        self.morpho = Morpho.load("czech-morfflex-161115.dict")
         function = True
         for param in params:
             if function:

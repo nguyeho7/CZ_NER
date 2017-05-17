@@ -327,6 +327,12 @@ def transform_dataset(dataset, params, merge="supertype", str_format = False):
         features_list.append(ft.extract_features(tokens, string_format=str_format))
     return labels, features_list, sentences
 
+def transform_dataset_web(sentence, params, merge="supertype"):
+    tokens = sentence.split(" ");
+    ft = feature_extractor(params)
+    features = ft.extract_features(tokens, string_format=True)
+    return features, tokens
+
 def save_indices(indices, filename):
     """
     Save a dictionary of word/tag to num index
