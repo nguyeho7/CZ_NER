@@ -15,8 +15,6 @@ def init(filename = "model.txt"):
         return label, params
 
 _, params = init()
-tagger = pycrfsuite.Tagger()
-tagger.open(model+".crfmodel")
 
 app = Flask(__name__)
 def wrap_text(tag, token):
@@ -31,8 +29,13 @@ def my_form():
 @app.route("/annotate", methods=['POST', 'GET'])
 def my_for_post():
     text = request.args.get('sentence', 0, type=str)
+    tagger = pycrfsuite.Tagger()
+    tagger.open(model+".crfmodel")
     features, tokens = transform_dataset_web(text, params, merge = "supertype")
+    print(features)
     predictions = tagger.tag(features)
+    print(predictions)
+    tagger.close()
     output = " ".join(wrap_text(tag, token) for tag, token in zip(predictions, tokens))
     return jsonify(result=output)
 if __name__ == "__main__":
