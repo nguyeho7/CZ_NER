@@ -72,7 +72,6 @@ class feature_extractor:
 
     def lemmatize(self, token):
         lemmas = TaggedLemmas()
-        print(token)
         result = self.morpho.analyze(token, self.morpho.GUESSER, lemmas)
         return {"lemma": lemmas[0].lemma, "raw": self.morpho.rawLemma(lemmas[0].lemma),
                 "tag":lemmas[0].tag}
@@ -102,7 +101,6 @@ class feature_extractor:
     def ft_get_label(self, *params):
         token = params[0]
         lemmas = self.lemmatize(token)
-        print(lemmas)
         return "w[0]", token
 
     def ft_to_lower(self, *params):
@@ -327,7 +325,7 @@ class feature_extractor:
             self._load_name_gzttr(params[0])
             return
         token = params[0]
-        flag = cz_stem(token) in self.name_gzttr
+        flag = self.lemmatize(token)['raw'] in self.name_gzttr
         return "name", flag
 
     def _load_name_gzttr(self, filename):
@@ -340,25 +338,40 @@ class feature_extractor:
         if init:
             self._load_addr_gzttr(params[0])
             return
-        token = params[0]
-        flag = token in self.addr_gzttr
+        token,i,tokens = params
+        end = len(tokens)
+        token_lemma = self.lemmatize(token)['raw']
+        flag = False
+        if token_lemma in self.addr_gzttr:
+            flag = True
+        elif token in self.addr_long_gzttr:
+            if i+1 < end:
+                next_token = tokens[i+1].title()
+                next_token_lemma = self.lemmatize(next_token)['raw'].title()
+                if next_token in self.addr_long_gzttr[token] or next_token_lemma in self.addr_long_gzttr[token]:
+                    flag = True
         return "address", flag
 
     def _load_addr_gzttr(self, filename):
         self.addr_gzttr =  set()
+        self.addr_long_gzttr = defaultdict(set)
         with open(filename) as f:
             for l in f:
-                token = l.strip()
+                token = l.title().strip()
                 if token.isdigit():
                     continue
-                self.addr_gzttr.add(token.title())
+                if " " in token:
+                    subtokens = token.split(" ")
+                    self.addr_long_gzttr[subtokens[0]].add(" ".join(subtokens[1:]))
+                else:
+                    self.addr_gzttr.add(token)
 
     def ft_lname_gzttr(self, *params, init=False):
         if init:
             self._load_lname_gzttr(params[0])
             return
         token = params[0]
-        flag = token in self.lname_gzttr
+        flag = self.lemmatize(token)['raw'] in self.lname_gzttr
         return "last_name", flag
 
     def _load_lname_gzttr(self, filename):
