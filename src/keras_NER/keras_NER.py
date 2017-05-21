@@ -2,7 +2,8 @@
 import src.common.NER_utils as t
 from src.common.eval import global_eval, output_evaluation, random_sample
 from keras.models import Sequential, load_model, model_from_json, Model
-from keras.layers import Input, Embedding, Bidirectional, Merge, TimeDistributed, Dense, LSTM,merge, Dropout, Convolution1D, Masking, GRU
+from keras.layers.core import Reshape, Permute
+from keras.layers import Input, Embedding, Bidirectional, Merge, TimeDistributed, Dense, LSTM,merge,Dropout, Convolution1D, Masking, GRU, Convolution2D, MaxPooling2D, Convolution1D
 from keras.layers.normalization import BatchNormalization
 from keras.preprocessing.sequence import pad_sequences
 from gensim.models.word2vec import Word2Vec
@@ -87,13 +88,17 @@ def vectorize_POS(features):
 def text_to_char(text, char_index):
     result = []
     for sentence in text:
-        curr_sentence = []
+        curr_sentence = [[0 for x in range(60)]]
         for word in sentence:
             vector = [char_index[c] for c in word]
             curr_sentence.append(vector)
-        curr_sentence = pad_sequences(curr_sentence, maxlen=10)
+        curr_sentence = pad_sequences(curr_sentence, maxlen=15)
         result.append(curr_sentence)
-    return np.array(result)
+    result = pad_sequences(result, maxlen=60)
+    print(result.shape)
+    result = np.reshape(result, (len(text),60*15))
+    print(result.shape)
+    return result
 
 def vectorize_features(features):
     #for every feature apart from POS tags
@@ -157,23 +162,58 @@ def define_model_baseline(vocab_size, tags):
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
     return model
 
-def define_model_cnn(vocab_size, tags, embeddings, char_count):
+def define_model_cnn(vocab_size, tags, embeddings, pos_vectors, feature_vectors, char_count):
     sentence_input = Input(shape=(60,), dtype='int32')
     embedding_layer = Embedding(input_dim = embeddings.shape[0], output_dim=embeddings.shape[1],
         weights=[embeddings], input_length=60, mask_zero=True)(sentence_input)
-    char_input = Input(shape=(60,10, ), dtype='int32')
-    char_embedding = Embedding(input_dim = char_count, output_dim=64, input_length = 60*10)(char_input)
-    cnns = [batchnormalization()(convolution1d(filter_length=flt, nb_filter=50, activation="tanh",
-        border_mode='same')(char_embedding)) for flt in
-            [2,3,4,5]]
-    merged = merge([embedding_layer, char_embedding], mode='concat')
+
+    POS_input = Input(shape=(60, len(pos_index)))
+    feature_input = Input(shape=(60, len(feature_functs)))
+
+    char_input = Input(shape=(60*15, ), dtype='int32')
+    char_embedding = Embedding(input_dim = char_count, output_dim=32, input_length = 60*15)(char_input)
+    reshape = Reshape((60, 15, 32))(char_embedding)
+    permute = Permute((3,1,2))(reshape) 
+    charcnn = Convolution2D(10, 1,2,border_mode='same')(permute)
+    charcnn_bnorm = BatchNormalization()(charcnn)
+    charcnn2 = Convolution2D(10, 1,2,border_mode='same')(charcnn_bnorm)
+    charcnn_bnorm2 = BatchNormalization()(charcnn2)
+    charcnn3 = Convolution2D(10, 1,2,border_mode='same')(charcnn_bnorm2)
+    charcnn_bnorm3 = BatchNormalization()(charcnn3)
+    permute2 = Permute((2,1,3))(charcnn_bnorm3)
+    pooling = MaxPooling2D((1, 2))(permute2)
+    print(pooling.shape)
+    reshape2 = Reshape((60,16*10)) (pooling)
+
+    merged = merge([embedding_layer, POS_input, feature_input, reshape2], mode='concat')
     bidir = Bidirectional(GRU(256, return_sequences=True))(merged)
     bidir_bnorm = BatchNormalization()(bidir)
     time_dist_dense = TimeDistributed(Dense(tags, activation='softmax'))(bidir_bnorm)
-    model = Model(input=[sentence_input, char_input], output=time_dist_dense)
+    model = Model(input=[sentence_input,  POS_input, feature_input, char_input], output=time_dist_dense)
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
     return model
 
+def define_model_charrnn(vocab_size, tags, embeddings, pos_vectors, feature_vectors, char_count):
+    sentence_input = Input(shape=(60,), dtype='int32')
+    embedding_layer = Embedding(input_dim = embeddings.shape[0], output_dim=embeddings.shape[1],
+        weights=[embeddings], input_length=60, mask_zero=True)(sentence_input)
+
+    POS_input = Input(shape=(60, len(pos_index)))
+    feature_input = Input(shape=(60, len(feature_functs)))
+
+    char_input = Input(shape=(60*15, ), dtype='int32')
+    char_embedding = Embedding(input_dim = char_count, output_dim=64, input_length = 60*15)(char_input)
+    reshape = Reshape((60,15,64))(char_embedding)
+    chrnn = TimeDistributed(GRU(64, return_sequences=False))(reshape)
+    chrnn_bnorm = BatchNormalization()(chrnn)
+
+    merged = merge([POS_input, feature_input, chrnn_bnorm], mode='concat')
+    bidir = Bidirectional(GRU(256, return_sequences=True))(merged)
+    bidir_bnorm = BatchNormalization()(bidir)
+    time_dist_dense = TimeDistributed(Dense(tags, activation='softmax'))(bidir_bnorm)
+    model = Model(input=[ POS_input, feature_input, char_input], output=time_dist_dense)
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
+    return model
 def define_model_baseline_2layer(vocab_size, tags):
     model = Sequential()
     model.add(Embedding(input_dim=vocab_size+2, output_dim=300, input_length=60, mask_zero=True))
@@ -216,9 +256,9 @@ def define_model_convolutional(vocab_size, tags, embeddings,  POS_vectors, featu
         weights=[embeddings], input_length=60)(sentence_input)
     POS_input = Input(shape=(60, len(pos_index)))
     feature_input = Input(shape=(60, len(feature_functs)))
-    cnns = [batchnormalization()(convolution1d(filter_length=flt, nb_filter=50, activation="tanh",
+    cnns = [BatchNormalization()(Convolution1D(filter_length=flt, nb_filter=50, activation="tanh",
         border_mode='same')(embedding_layer)) for flt in
-            [2,3,4,5]]
+            [2,3]]
     masked_embedding =Masking(mask_value=0.0)(embedding_layer) 
     cnns_merged = merge(cnns, mode='concat')
     merged = merge([masked_embedding, POS_input, feature_input, cnns_merged], mode='concat')
@@ -286,8 +326,8 @@ def main():
     tag_indices_filename = "tag_indices_bilou.json"
     #tag_indices_filename = "tag_indices.json"
     merge_type = "BILOU" # BIO, none, supertype, BILOU
-    model_filename = "concat"
-#    w2index, embeddings = load_embedding_matrix("d300w5_10p_ft_skipgram", "named_ent.txt")
+    model_filename = "convolutional"
+    #w2index, embeddings = load_embedding_matrix("d300w5_10p_ft_skipgram", "named_ent.txt")
  #   np.save(open('d300w5_skipgram_subset.np', 'bw'), embeddings)
   #  json.dump(w2index, open('d300w5_skipgram_indices.json', 'w'))
     w2index, embeddings = load_embedding_subset("d300w5_skipgram_subset.np",
@@ -304,7 +344,6 @@ def main():
     x_train_cnn = text_to_char(train_text, char_indices)
     x_val_cnn = text_to_char(val_text, char_indices)
     x_test_cnn = text_to_char(test_text, char_indices)
-    print(x_train_cnn.shape)
     #model = load_model(model_filename)
     #model = define_model_convolutional(vocab_size, len(tag_indices), embeddings, POS_train, ft_train)
     #model = define_model_concat(vocab_size, len(tag_indices), embeddings, POS_train, ft_train)
@@ -319,9 +358,9 @@ def main():
     #model = define_model_POS(vocab_size, len(tag_indices), embeddings, POS_train)
     #train_model(model, [x_train, POS_train], y_train, [x_val, POS_val], y_val, model_filename)
     #y_pred = make_predictions(model, [x_test, POS_test], y_test, inverted_indices)
-    model = define_model_cnn(vocab_size, len(tag_indices), embeddings, len(char_indices))
-    train_model(model, [x_train, x_train_cnn], y_train, [x_val, x_val_cnn], y_val, model_filename)
-    y_pred = make_predictions(model, [x_test, x_test_cnn], y_test, inverted_indices)
+    model = define_model_charrnn(vocab_size, len(tag_indices), embeddings, POS_train, ft_train, len(char_indices))
+    train_model(model, [POS_train, ft_train, x_train_cnn], y_train, [POS_val, ft_val, x_val_cnn], y_val, model_filename)
+    y_pred = make_predictions(model, [POS_test, ft_test, x_test_cnn], y_test, inverted_indices)
 
     evaluations = global_eval(y_pred, y_test)
     #train_pred = make_predictions(model, x_train, y_train, inverted_indices)

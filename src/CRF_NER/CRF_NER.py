@@ -8,6 +8,7 @@ import pycrfsuite
 import sys 
 from collections import Counter
 import random
+import json
 
 """
 Usage: python CRF_NER.py named_ent_dtest.txt named_ent_etest.txt model.txt 
@@ -43,9 +44,6 @@ def predict_and_eval(models, filename, merge):
         tagger.open(model+".crfmodel")
         labels, features, text = load_transform_dataset(filename, params, merge,str_format = True)
         predictions = [tagger.tag(sentence) for sentence in features]
-        evaluations = global_eval(predictions, labels)
-        output_evaluation(*evaluations, model_name=model)
-        random_sample("sentences_50_predict_cnec", text, predictions, labels, 50)
 
 def get_filenames(train_set):
     return train_set.split(' ')
@@ -58,13 +56,13 @@ def train_and_eval(models, train_set, test_set, merge):
             tr_label, tr_feature, _ = load_transform_dataset(tr_set, params, merge, str_format=False)
             for lab, feat in zip(tr_label, tr_feature):
                 trainer.append(feat, lab)
+        trainer.set_params({'feature.minfreq': 5})
         trainer.train(model+'.crfmodel')
         tagger = pycrfsuite.Tagger()
         tagger.open(model+'.crfmodel')
         predictions = [tagger.tag(sentence) for sentence in te_feature]
-        evaluations = global_eval(predictions, te_label)
-        output_evaluation(*evaluations, model_name=model)
-        random_sample("sentences_50_train_eval", text, predictions, te_label, 50)
+        test_result = [[sent, pred] for sent, pred in zip(text, predictions)]
+        json.dump(test_result, open(model+"_textoutput.json", "w"))
 
 def main():
     args = parse_args()

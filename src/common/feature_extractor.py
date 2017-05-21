@@ -53,7 +53,7 @@ class feature_extractor:
                      'contains_at': self.ft_contains_at,
                      'contains_digit': self.ft_contains_digit}
 
-        external_functs = {'addr_gzttr', 'name_gzttr', 'POS_curr', 'clusters_8', 'lname_gzttr'}
+        external_functs = {'addr_gzttr', 'name_gzttr', 'POS_curr_json', 'clusters_8', 'lname_gzttr'}
         self.functions = []
         self.POS_dict = {}
         self.POS_tags = {}
