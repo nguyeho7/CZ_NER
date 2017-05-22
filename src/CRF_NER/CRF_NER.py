@@ -50,13 +50,13 @@ def get_filenames(train_set):
 
 def train_and_eval(models, train_set, test_set, merge):
     for model, params in models:
+        model = model + "v2"
         trainer = pycrfsuite.Trainer(verbose=True)
         te_label, te_feature, text = load_transform_dataset(test_set, params, merge, str_format=False) 
         for tr_set in get_filenames(train_set):
             tr_label, tr_feature, _ = load_transform_dataset(tr_set, params, merge, str_format=False)
             for lab, feat in zip(tr_label, tr_feature):
                 trainer.append(feat, lab)
-        trainer.set_params({'feature.minfreq': 5})
         trainer.train(model+'.crfmodel')
         tagger = pycrfsuite.Tagger()
         tagger.open(model+'.crfmodel')
