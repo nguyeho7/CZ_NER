@@ -27,29 +27,36 @@ def load_dataset_json(filename, params, str_format):
         y_gold.append(question['entity-labels'])
     return y_gold, sentences_features, sentences_text
 
-def transform_dataset_conll(dataset, params, str_format):
+def transform_dataset_conll(dataset):
     sentences_text = []
     features = []
     tags = []
-    ft = feature_extractor(params)
     current_sentence = []
     current_sentence_tags = []
+    current_sentence_features = []
+    ft = feature_extractor([""])
     for line in dataset:
+        line = line.strip()
+        if line == "-DOCSTART- -X- O O":
+            continue
         if len(line) == 0:
+            if len(current_sentence) > 0:
+                sentences_text.append(current_sentence)
+                current_sentence = []
+                extracted_fts = ft.extract_features_sentence_conll(current_sentence_features)
+                current_sentence_features = []
+                features.append(extracted_fts)
+                tags.append(current_sentence_tags)
+                current_sentence_tags = []
             continue
         data = line.split(' ')
-        if len(data) < 2:
-            print(current_sentence)
-            sentences_text.append(current_sentence)
-            features.append(ft.extract_features(current_sentence, string_format = str_format))
-            tags.append(current_sentence_tags)
-            current_sentence = []
-            current_sentence_tags = []
-        else:
-            token = data[0]
-            tag = data[1]
-            current_sentence.append(token)
-            current_sentence_tags.append(tag)
+        token = data[0]
+        pos = data[1]
+        dep_tag = data[2]
+        tag = data[3]
+        current_sentence.append(token)
+        current_sentence_features.append({"label":token, "pos":pos, "dep":dep})
+        current_sentence_tags.append(tags)
     return tags, features, sentences_text
     
 

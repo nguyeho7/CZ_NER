@@ -98,6 +98,47 @@ class feature_extractor:
         self.POS_tags={}
         return result 
 
+    def extract_features_sentence_conll(self, features, string_format=True):
+        result = []
+        for i, fts in enumerate(features):
+            token = fts['label']
+            curr_ft = {}
+            # prev and next label
+            curr_ft.update({"w[0]" : fts['label']})
+            curr_ft.update(self.ft_conll_get_prev(features,"label", "w[-1]", i))
+            curr_ft.update(self.ft_conll_get_next(features,"label", "w[1]", i))
+            # prev and next POS tag
+            curr_ft.update({"pos[0]" : fts['pos']})
+            curr_ft.update(self.ft_conll_get_prev(features,"pos", "pos[-1]", i))
+            curr_ft.update(self.ft_conll_get_next(features,"pos", "pos[1]", i))
+
+            curr_ft.update({"dep[0]" : fts['dep']})
+            curr_ft.update(self.ft_conll_get_prev(features,"dep", "dep[-1]", i))
+            curr_ft.update(self.ft_conll_get_next(features,"dep", "dep[1]", i))
+            for ft_func in self.functions:
+                key, value = ft_func(token, i)
+                curr_ft.update({key:value})
+            if string_format:
+                ft_list = [key+"="+str(value) for key, value in curr_ft.items()]
+                result.append(ft_list)
+            else:
+                result.append(curr_ft)
+        return result
+
+    def ft_conll_get_prev(self, features, feature, label, i):
+        end = len(features)-1
+        if i > 0:
+            return label, features[i-1][feature]
+        else:
+            return label, "START"
+
+    def ft_conll_get_next(self, features, feature, label, i):
+        end = len(features)-1
+        if i < end:
+            return label, features[i+1][feature]
+        else:
+            return label," END" 
+
     def ft_get_label(self, *params):
         token = params[0]
         lemmas = self.lemmatize(token)
