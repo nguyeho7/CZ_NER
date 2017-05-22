@@ -32,6 +32,7 @@ def parse_args():
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-t", "--train", action="store_true")
     group.add_argument("-p", "--predict", action="store_true")
+    group.add_argument("-c", "--conll", action="store_true")
     parser.add_argument('train_set', help='train set filename')
     parser.add_argument('test_set', help='test set filename')
     parser.add_argument('models', help='models filename')
@@ -64,6 +65,25 @@ def train_and_eval(models, train_set, test_set, merge):
         test_result = [[sent, pred] for sent, pred in zip(text, predictions)]
         json.dump(test_result, open(model+"_textoutput.json", "w"))
 
+def train_and_eval(filename="conllout.txt", train_set, test_set):
+    trainer = pycrfsuite.Trainer(verbose=True)
+    te_label, te_feature, text = transform_dataset_conll(test_set) 
+    tr_label, tr_feature, _ = transform_dataset_conll(tr_set)
+    for lab, feat in zip(tr_label, tr_feature):
+        trainer.append(feat, lab)
+    trainer.train(model+'.crfmodel')
+    tagger = pycrfsuite.Tagger()
+    tagger.open(model+'.crfmodel')
+    predictions = [tagger.tag(sentence) for sentence in te_feature]
+    test_result = [[sent, pred] for sent, pred in zip(text, predictions)]
+    result_text = ""
+    for sent, pred in zip(text, predictions):
+        for word, tag in zip(sent, pred):
+            result_text += word +" "+tag
+        result_text += "\n"
+    with open(filename, "w") as f:
+        f.write(result_text)
+
 def main():
     args = parse_args()
     models = parse_commands(args.models) 
@@ -72,6 +92,8 @@ def main():
         train_and_eval(models, args.train_set, args.test_set, merge)
     elif args.predict:
         predict_and_eval(models, args.test_set, merge)
+    elif args.conll:
+        train_and_eval_conll()
 
 if __name__ == '__main__':
     main()
