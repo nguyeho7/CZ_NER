@@ -54,7 +54,7 @@ def get_data(filename, indices, tag_indices, validation=False, merge="none"):
     vocab_size = len(indices)
     X_train = []
     Y_train = []
-    ft_params = ['label','POS_curr', 'POS_final.json', "is_capitalised", 'addr_gzttr', 'adresy.txt',
+    ft_params = ['label','POS_curr_json', 'POS_final.json', "is_capitalised", 'addr_gzttr', 'adresy.txt',
             'name_gzttr','czech_names', 'lname_gzttr', "czech_last_names",'contains_at',
             'contains_digit']
     feature_list = []
@@ -78,6 +78,37 @@ def get_data(filename, indices, tag_indices, validation=False, merge="none"):
     POS_np = pad_sequences(np.array(POS), maxlen=60)
     feature_list_np = pad_sequences(np.array(feature_list), maxlen=60)
     return x_train, y_train, POS_np, feature_list_np, sentences_text, vocab_size
+
+def get_data_conll(filename, indices, tag_indices, pos_indices, validation=False):
+    vocab_size = len(indices)
+    X_train = []
+    Y_train = []
+    feature_list = []
+    POS = []
+    gtags, features, text = t.transform_dataset_conll(filename)
+    for sentence in text:
+        X_train.append(vectorize_sentence(sentence, indices))
+    for fts in features:
+        POS.append(vectorize_POS_conll(fts, pos_indices))
+    for tags in gtags:
+        if validation:
+            Y_train.append(tags[:60])
+        else:
+            Y_train.append(vectorize_tags(tags, tag_indices))
+    POS_np = pad_sequences(np.array(POS), maxlen=60)
+    x_train = pad_sequences(np.array(X_train), maxlen=60)
+    if validation:
+        y_train = Y_train
+    else:
+        y_train = pad_sequences(np.array(Y_train), maxlen=60)
+    return x_train, y_train, POS_np, text, vocab_size
+    
+
+def vectorize_POS_conll(fts, pos_indices):
+    result = [[0 for x in range(len(pos_indices)+1)] for y in range(len(fts))]
+    for i, ft in enumerate(fts):
+        result[i][pos_indices[ft['pos[0]']]] = 1
+    return np.array(result)
 
 def vectorize_POS(features):
     result = [[0 for x in range(len(pos_index))] for y in range(len(features))]
@@ -159,6 +190,20 @@ def define_model_baseline(vocab_size, tags):
     model.add(Bidirectional(GRU(256, return_sequences=True)))
     model.add(BatchNormalization())
     model.add(TimeDistributed(Dense(tags, activation='softmax')))
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
+    return model
+
+def define_model_conll(vocab_size, tags, pos_vectors):
+    sentence_input = Input(shape=(60,), dtype='int32')
+    embedding_layer = Embedding(input_dim=vocab_size+2, output_dim=100, input_length=60, mask_zero=True)(sentence_input)
+
+    POS_input = Input(shape=(60, len(pos_vectors)+1))
+
+    merged = merge([embedding_layer, POS_input], mode='concat')
+    bidir = Bidirectional(GRU(256, return_sequences=True))(merged)
+    bidir_bnorm = BatchNormalization()(bidir)
+    time_dist_dense = TimeDistributed(Dense(tags, activation='softmax'))(bidir_bnorm)
+    model = Model(input=[sentence_input,  POS_input], output=time_dist_dense)
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
     return model
 
@@ -256,7 +301,7 @@ def define_model_convolutional(vocab_size, tags, embeddings,  POS_vectors, featu
         weights=[embeddings], input_length=60)(sentence_input)
     POS_input = Input(shape=(60, len(pos_index)))
     feature_input = Input(shape=(60, len(feature_functs)))
-    cnns = [BatchNormalization()(Convolution1D(filter_length=flt, nb_filter=50, activation="tanh",
+    cnns = [BatchNormalization()(Convolution1D(filter_length=flt, nb_filter=20, activation="tanh",
         border_mode='same')(embedding_layer)) for flt in
             [2,3]]
     masked_embedding =Masking(mask_value=0.0)(embedding_layer) 
@@ -321,12 +366,40 @@ def make_predictions(model, x_test, y_test, inverted_indices):
         y_pred.append(sentence_list)
     return y_pred
 
+def conll_test():
+    tag_indices = load_indices("conll_tags.json")
+    w2index = load_indices("conll_tokens.json")
+    pos_indices = load_indices("conll_pos.json")
+    model_filename = "conll_NN"
+    x_train, y_train, POS_train, train_text, vocab_size = get_data_conll("eng.train", w2index, tag_indices,
+            pos_indices)
+    x_val, y_val, POS_val, val_text, _ = get_data_conll("eng.testa", w2index, tag_indices,
+            pos_indices)
+    x_test, y_test, POS_test,test_text, _ = get_data_conll("eng.testb", w2index, tag_indices,
+            pos_indices, validation=True)
+
+    inverted_indices = {v: k for k, v in tag_indices.items()}
+    model = define_model_conll(vocab_size, len(tag_indices), pos_indices)
+    train_model(model, [x_train, POS_train], y_train, [x_val, POS_val], y_val, model_filename)
+    y_pred = make_predictions(model, [x_test, POS_test], y_test, inverted_indices)
+    result_text = ""
+    for sent, pred, label in zip(test_text, y_pred, y_test):
+        for ft, tag, gold in zip(sent, pred, label):
+            word = ft
+            pos = 'pos[0]'
+            result_text += word +" "+pos+" "+gold+" "+tag+"\n"
+        result_text += "\n"
+    with open(model_filename, "w") as f:
+        f.write(result_text)
+
+
 def main():
+    conll_test()
     #tag_indices_filename = "tag_indices_merged.json"
-    tag_indices_filename = "tag_indices_bilou.json"
+    tag_indices_fieename = "tag_indices_bilou.json"
     #tag_indices_filename = "tag_indices.json"
     merge_type = "BILOU" # BIO, none, supertype, BILOU
-    model_filename = "convolutional"
+    model_filename = "convolution"
     #w2index, embeddings = load_embedding_matrix("d300w5_10p_ft_skipgram", "named_ent.txt")
  #   np.save(open('d300w5_skipgram_subset.np', 'bw'), embeddings)
   #  json.dump(w2index, open('d300w5_skipgram_indices.json', 'w'))
@@ -337,13 +410,13 @@ def main():
     inverted_indices = {v: k for k, v in tag_indices.items()}
     char_indices = load_indices("character_index.json")
 
-    x_train, y_train, POS_train, ft_train ,train_text,  vocab_size = get_data('named_ent_train.txt', w2index,
-            tag_indices,merge=merge_type)
-    x_val, y_val, POS_val, ft_val, val_text, _ = get_data('named_ent_dtest.txt', w2index, tag_indices, merge=merge_type)
-    x_test, y_test, POS_test, ft_test, test_text, _ = get_data('named_ent_etest.txt', w2index, tag_indices, validation=True, merge=merge_type)
-    x_train_cnn = text_to_char(train_text, char_indices)
-    x_val_cnn = text_to_char(val_text, char_indices)
-    x_test_cnn = text_to_char(test_text, char_indices)
+#    x_train, y_train, POS_train, ft_train ,train_text,  vocab_size = get_data('named_ent_train.txt', w2index,
+ #           tag_indices,merge=merge_type)
+  #  x_val, y_val, POS_val, ft_val, val_text, _ = get_data('named_ent_dtest.txt', w2index, tag_indices, merge=merge_type)
+   # x_test, y_test, POS_test, ft_test, test_text, _ = get_data('named_ent_etest.txt', w2index, tag_indices, validation=True, merge=merge_type)
+    #x_train_cnn = text_to_char(train_text, char_indices)
+    #x_val_cnn = text_to_char(val_text, char_indices)
+    #x_test_cnn = text_to_char(test_text, char_indices)
     #model = load_model(model_filename)
     #model = define_model_convolutional(vocab_size, len(tag_indices), embeddings, POS_train, ft_train)
     #model = define_model_concat(vocab_size, len(tag_indices), embeddings, POS_train, ft_train)
@@ -358,9 +431,9 @@ def main():
     #model = define_model_POS(vocab_size, len(tag_indices), embeddings, POS_train)
     #train_model(model, [x_train, POS_train], y_train, [x_val, POS_val], y_val, model_filename)
     #y_pred = make_predictions(model, [x_test, POS_test], y_test, inverted_indices)
-    model = define_model_charrnn(vocab_size, len(tag_indices), embeddings, POS_train, ft_train, len(char_indices))
-    train_model(model, [POS_train, ft_train, x_train_cnn], y_train, [POS_val, ft_val, x_val_cnn], y_val, model_filename)
-    y_pred = make_predictions(model, [POS_test, ft_test, x_test_cnn], y_test, inverted_indices)
+    #model = define_model_charrnn(vocab_size, len(tag_indices), embeddings, POS_train, ft_train, len(char_indices))
+    #train_model(model, [POS_train, ft_train, x_train_cnn], y_train, [POS_val, ft_val, x_val_cnn], y_val, model_filename)
+    #y_pred = make_predictions(model, [POS_test, ft_test, x_test_cnn], y_test, inverted_indices)
 
     evaluations = global_eval(y_pred, y_test)
     #train_pred = make_predictions(model, x_train, y_train, inverted_indices)

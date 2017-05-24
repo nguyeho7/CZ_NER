@@ -27,23 +27,26 @@ def load_dataset_json(filename, params, str_format):
         y_gold.append(question['entity-labels'])
     return y_gold, sentences_features, sentences_text
 
-def transform_dataset_conll(dataset):
+def transform_dataset_conll(dataset_name):
+    dataset = open(dataset_name)
     sentences_text = []
     features = []
     tags = []
     current_sentence = []
     current_sentence_tags = []
     current_sentence_features = []
-    ft = feature_extractor([""])
+    ft = feature_extractor(["get_type", "is_capitalised", "contains_at", "contains_digit",
+        "suffix_2", "suffix_3", "prefix_2", "prefix_3"])
     for line in dataset:
         line = line.strip()
-        if line == "-DOCSTART- -X- O O":
+        if line.startswith("-DOCSTART-"):
             continue
         if len(line) == 0:
             if len(current_sentence) > 0:
                 sentences_text.append(current_sentence)
                 current_sentence = []
-                extracted_fts = ft.extract_features_sentence_conll(current_sentence_features)
+                extracted_fts = ft.extract_features_sentence_conll(current_sentence_features,
+                        string_format=False)
                 current_sentence_features = []
                 features.append(extracted_fts)
                 tags.append(current_sentence_tags)
@@ -52,13 +55,43 @@ def transform_dataset_conll(dataset):
         data = line.split(' ')
         token = data[0]
         pos = data[1]
-        dep_tag = data[2]
+        dep = data[2]
         tag = data[3]
         current_sentence.append(token)
         current_sentence_features.append({"label":token, "pos":pos, "dep":dep})
-        current_sentence_tags.append(tags)
+        current_sentence_tags.append(tag)
     return tags, features, sentences_text
     
+
+def read_dataset_conll(dataset_name):
+    dataset = open(dataset_name)
+    sentences_text = []
+    features = []
+    current_sentence = []
+    current_sentence_features = []
+    ft = feature_extractor(["get_type", "is_capitalised", "contains_at", "contains_digit",
+        "suffix_2", "suffix_3", "prefix_2", "prefix_3"])
+    for line in dataset:
+        line = line.strip()
+        if line.startswith("-DOCSTART-"):
+            continue
+        if len(line) == 0:
+            if len(current_sentence) > 0:
+                sentences_text.append(current_sentence)
+                current_sentence = []
+                extracted_fts = ft.extract_features_sentence_conll(current_sentence_features,
+                        string_format=False)
+                current_sentence_features = []
+                features.append(extracted_fts)
+            continue
+        data = line.split(' ')
+        token = data[0]
+        pos = data[1]
+        dep = data[2]
+        current_sentence.append(token)
+        current_sentence_features.append({"label":token, "pos":pos, "dep":dep})
+    return  features, sentences_text
+
 
 def load_transform_dataset(filename, params, merge, str_format):
     """
@@ -375,16 +408,35 @@ def create_indices(dataset_filename, tag_filename, token_filename):
     print('{} total words'.format(i))
     print('{} max sentence length'.format(max_l))
 
-def dump_dataset(labels, features, filename):
-    """
-    NOTE: NOT WORKING YET. NESTED SENTENCES
-    """
-    with open(filename, 'w') as out:
-        for label, feature in zip(labels, features):
-            if len(feature) == 0:
+def create_indices_conll(dataset_filename, tag_filename, token_filename, pos_filename):
+    tags, features, sentences_text = transform_dataset_conll(dataset_filename)
+    indices = {}
+    tag_indices = {}
+    pos_indices = {}
+    pos_i = 1
+    i = 1
+    tag_i = 0
+    max_l = 0
+    for tag_seq, sentence in zip(tags, features):
+        max_l = max(max_l, len(sentence))
+        for ft in sentence:
+            word = ft['w[0]']
+            pos = ft['pos[0]']
+            if not pos in pos_indices:
+                pos_indices.update({pos : pos_i})
+                pos_i += 1
+            if not (word in indices):
+                indices.update({word: i})
+                i += 1
+        for tag in tag_seq:
+            if tag in tag_indices:
                 continue
-            s += ["\t".join(feature) for feature in features]
-            out.write(label[0])
-            out.write('\t')
-            out.write(s)
-            out.write('\n')
+            else:
+                tag_indices.update({tag: tag_i})
+                tag_i += 1
+    save_indices(tag_indices, tag_filename)
+    save_indices(indices, token_filename)
+    save_indices(pos_indices, pos_filename)
+    print('{} total words'.format(i))
+    print('{} max sentence length'.format(max_l))
+

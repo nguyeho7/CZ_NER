@@ -29,6 +29,7 @@ class feature_extractor:
                      'prev' :self.ft_get_prev,
                      'next_2':self.ft_get_next_2,
                      'prev_2':self.ft_get_prev_2,
+                     'lemma':self.ft_lemma,
                      'POS_curr': self.ft_POS_curr,
                      'POS_curr_json': self.ft_POS_curr,
                      'POS_prev': self.ft_POS_prev,
@@ -98,7 +99,7 @@ class feature_extractor:
         self.POS_tags={}
         return result 
 
-    def extract_features_sentence_conll(self, features, string_format=True):
+    def extract_features_sentence_conll(self, features, string_format=False):
         result = []
         for i, fts in enumerate(features):
             token = fts['label']
@@ -117,7 +118,7 @@ class feature_extractor:
             curr_ft.update(self.ft_conll_get_next(features,"dep", "dep[1]", i))
             for ft_func in self.functions:
                 key, value = ft_func(token, i)
-                curr_ft.update({key:value})
+                curr_ft.update({key: str(value)})
             if string_format:
                 ft_list = [key+"="+str(value) for key, value in curr_ft.items()]
                 result.append(ft_list)
@@ -128,21 +129,26 @@ class feature_extractor:
     def ft_conll_get_prev(self, features, feature, label, i):
         end = len(features)-1
         if i > 0:
-            return label, features[i-1][feature]
+            return {label: features[i-1][feature]}
         else:
-            return label, "START"
+            return {label: "START"}
 
     def ft_conll_get_next(self, features, feature, label, i):
         end = len(features)-1
         if i < end:
-            return label, features[i+1][feature]
+            return {label: features[i+1][feature]}
         else:
-            return label," END" 
+            return {label: "END"}
 
     def ft_get_label(self, *params):
         token = params[0]
         lemmas = self.lemmatize(token)
         return "w[0]", token
+
+    def ft_lemma(self, *params):
+        token = params[0]
+        lemmas = self.lemmatize(token)
+        return "lemma[0]", lemmas['raw']
 
     def ft_to_lower(self, *params):
         token = params[0]
@@ -152,7 +158,8 @@ class feature_extractor:
         token,i,tokens = params
         end = len(tokens)-1
         if i > 0:
-            return "w[-1]", tokens[i-1]
+            lemmas = self.lemmatize(tokens[i-1])
+            return "w[-1]", lemmas['raw']
         else:
             return "w[-1]", "START"
 
@@ -160,7 +167,8 @@ class feature_extractor:
         token,i,tokens = params
         end = len(tokens)-1
         if i < end:
-            return "w[1]", tokens[i+1]
+            lemmas = self.lemmatize(tokens[i+1])
+            return "w[1]", lemmas['raw']
         else:
             return"w[1]"," END" 
 
@@ -168,7 +176,8 @@ class feature_extractor:
         token,i,tokens = params
         end = len(tokens)-1
         if i < end-1:
-            return "w[2]", tokens[i+2]
+            lemmas = self.lemmatize(tokens[i+1])
+            return "w[2]", lemmas['raw']
         else:
             return "w[2]", "END"
 
@@ -176,7 +185,8 @@ class feature_extractor:
         token,i,tokens = params
         end = len(tokens)-1
         if i > 1:
-            return "w[-2]", tokens[i-2]
+            lemmas = self.lemmatize(tokens[i-2])
+            return "w[-2]", lemmas['raw']
         else:
             return "w[-2]", "START"
 
@@ -194,11 +204,11 @@ class feature_extractor:
 
     def ft_get_prefix_2(self, *params):
         token = params[0]
-        return "prefix_2",token[2:]
+        return "prefix_2",token[:2]
 
     def ft_get_prefix_3(self, *params):
         token = params[0]
-        return "prefix_3",token[3:]
+        return "prefix_3",token[:3]
 
     def ft_conditional_prev_1(self, *params):
         token, i, tokens = params

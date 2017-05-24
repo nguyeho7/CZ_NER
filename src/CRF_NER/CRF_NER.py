@@ -2,6 +2,7 @@
 from src.common.NER_utils import transform_dataset 
 from src.common.NER_utils import dump_POS_tags
 from src.common.NER_utils import load_transform_dataset
+from src.common.NER_utils import transform_dataset_conll
 from src.common.eval import global_eval, output_evaluation, random_sample
 import argparse
 import pycrfsuite
@@ -51,7 +52,6 @@ def get_filenames(train_set):
 
 def train_and_eval(models, train_set, test_set, merge):
     for model, params in models:
-        model = model + "v2"
         trainer = pycrfsuite.Trainer(verbose=True)
         te_label, te_feature, text = load_transform_dataset(test_set, params, merge, str_format=False) 
         for tr_set in get_filenames(train_set):
@@ -65,21 +65,23 @@ def train_and_eval(models, train_set, test_set, merge):
         test_result = [[sent, pred] for sent, pred in zip(text, predictions)]
         json.dump(test_result, open(model+"_textoutput.json", "w"))
 
-def train_and_eval(filename="conllout.txt", train_set, test_set):
+def train_and_eval_conll(train_set, test_set, filename="conllout.txt"):
+    model="conll2003basci"
     trainer = pycrfsuite.Trainer(verbose=True)
     te_label, te_feature, text = transform_dataset_conll(test_set) 
-    tr_label, tr_feature, _ = transform_dataset_conll(tr_set)
+    tr_label, tr_feature, _ = transform_dataset_conll(train_set)
     for lab, feat in zip(tr_label, tr_feature):
         trainer.append(feat, lab)
-    trainer.train(model+'.crfmodel')
+    #trainer.train(model+'.crfmodel')
     tagger = pycrfsuite.Tagger()
     tagger.open(model+'.crfmodel')
     predictions = [tagger.tag(sentence) for sentence in te_feature]
-    test_result = [[sent, pred] for sent, pred in zip(text, predictions)]
     result_text = ""
-    for sent, pred in zip(text, predictions):
-        for word, tag in zip(sent, pred):
-            result_text += word +" "+tag
+    for sent, pred, label in zip(te_feature, predictions, te_label):
+        for ft, tag, gold in zip(sent, pred, label):
+            word = ft['w[0]']
+            pos = ft['pos[0]']
+            result_text += word +" "+pos+" "+gold+" "+tag+"\n"
         result_text += "\n"
     with open(filename, "w") as f:
         f.write(result_text)
@@ -93,7 +95,7 @@ def main():
     elif args.predict:
         predict_and_eval(models, args.test_set, merge)
     elif args.conll:
-        train_and_eval_conll()
+        train_and_eval_conll(args.train_set, args.test_set)
 
 if __name__ == '__main__':
     main()
