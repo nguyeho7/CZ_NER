@@ -48,8 +48,9 @@ class feature_extractor:
         print("i will use following feature functions:", self.functions)
 
 
-    def extract_features_sentence_conll(self, features, string_format=False):
+    def extract_features_sentence_conll(self, features, external_data, string_format=False):
         result = []
+        self.external_data = external_data
         for i, fts in enumerate(features):
             token = fts['label']
             curr_ft = {}
@@ -81,6 +82,7 @@ class feature_extractor:
                 result.append(ft_list)
             else:
                 result.append(curr_ft)
+        self.external_data = None
         return result
 
     def ft_conll_get_prev(self, features, feature, label, i):
@@ -185,6 +187,8 @@ class feature_extractor:
                 next_token = features[i-1]['label']
                 if next_token in self.loc_gzttr_before[token]:
                     flag = True
+        elif token in self.external_data['LOC']:
+            flag = True
         return "loc", flag
 
     def _load_loc_gzttr(self, filename):
@@ -198,7 +202,7 @@ class feature_extractor:
                 if len(tokens) == 2:
                     self.loc_gzttr_1word.add(tokens[1])
                 else:
-                    for i in range(3, len(tokens)):
+                    for i in range(2, len(tokens)):
                         subtoken = tokens[i]
                         subtoken_prev = tokens[i-1]
                         self.loc_gzttr_after[subtoken_prev].add(subtoken)
@@ -224,6 +228,8 @@ class feature_extractor:
                 next_token = features[i-1]['label']
                 if next_token in self.misc_gzttr_before[token]:
                     flag = True
+        elif token in self.external_data['MISC']:
+            flag = True
         return "misc", flag
 
     def _load_misc_gzttr(self, filename):
@@ -237,7 +243,7 @@ class feature_extractor:
                 if len(tokens) == 2:
                     self.misc_gzttr_1word.add(tokens[1])
                 else:
-                    for i in range(3, len(tokens)):
+                    for i in range(2, len(tokens)):
                         subtoken = tokens[i]
                         subtoken_prev = tokens[i-1]
                         self.misc_gzttr_after[subtoken_prev].add(subtoken)
@@ -264,6 +270,8 @@ class feature_extractor:
                 next_token = features[i-1]['label']
                 if next_token in self.per_gzttr_before[token]:
                     flag = True
+        elif token in self.external_data['PER']:
+            flag = True
         return "per", flag
 
     def _load_per_gzttr(self, filename):
@@ -277,7 +285,7 @@ class feature_extractor:
                 if len(tokens) == 2:
                     self.per_gzttr_1word.add(tokens[1])
                 else:
-                    for i in range(3, len(tokens)):
+                    for i in range(2, len(tokens)):
                         subtoken = tokens[i]
                         subtoken_prev = tokens[i-1]
                         self.per_gzttr_after[subtoken_prev].add(subtoken)
@@ -304,6 +312,8 @@ class feature_extractor:
                 next_token = features[i-1]['label']
                 if next_token in self.org_gzttr_before[token]:
                     flag = True
+        elif token in self.external_data['ORG']:
+            flag = True
         return "org", flag
 
     def _load_org_gzttr(self, filename):
@@ -317,7 +327,7 @@ class feature_extractor:
                 if len(tokens) == 2:
                     self.org_gzttr_1word.add(tokens[1])
                 else:
-                    for i in range(3, len(tokens)):
+                    for i in range(2, len(tokens)):
                         subtoken = tokens[i]
                         subtoken_prev = tokens[i-1]
                         self.org_gzttr_after[subtoken_prev].add(subtoken)
