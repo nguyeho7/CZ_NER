@@ -40,6 +40,7 @@ class feature_extractor:
                      'contains_at': self.ft_contains_at,
                      'contains_digit': self.ft_contains_digit}
 
+        self.clusters = defaultdict(lambda:'-1')
         external_functs = {'per_gzttr', 'loc_gzttr', 'misc_gzttr', 'org_gzttr', "clusters_8"}
         self.functions = []
         function = True
