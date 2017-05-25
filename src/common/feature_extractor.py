@@ -190,7 +190,7 @@ class feature_extractor:
                     flag = True
         return "loc", flag
 
-    def _load_loc_gzttr(self, filename)
+    def _load_loc_gzttr(self, filename):
         self.loc_gzttr_1word =  set()
         self.loc_gzttr_after =  defaultdict(set)
         self.loc_gzttr_before =  defaultdict(set)
@@ -229,7 +229,7 @@ class feature_extractor:
                     flag = True
         return "misc", flag
 
-    def _load_misc_gzttr(self, filename)
+    def _load_misc_gzttr(self, filename):
         self.misc_gzttr_1word =  set()
         self.misc_gzttr_after =  defaultdict(set)
         self.misc_gzttr_before =  defaultdict(set)
@@ -269,7 +269,7 @@ class feature_extractor:
                     flag = True
         return "per", flag
 
-    def _load_per_gzttr(self, filename)
+    def _load_per_gzttr(self, filename):
         self.per_gzttr_1word =  set()
         self.per_gzttr_after =  defaultdict(set)
         self.per_gzttr_before =  defaultdict(set)
@@ -309,7 +309,7 @@ class feature_extractor:
                     flag = True
         return "org", flag
 
-    def _load_org_gzttr(self, filename)
+    def _load_org_gzttr(self, filename):
         self.org_gzttr_1word =  set()
         self.org_gzttr_after =  defaultdict(set)
         self.org_gzttr_before =  defaultdict(set)
