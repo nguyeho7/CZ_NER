@@ -31,10 +31,16 @@ class feature_extractor:
                      'loc_gzttr' : self.ft_loc_gzttr,
                      'misc_gzttr' : self.ft_misc_gzttr,
                      'org_gzttr' : self.ft_org_gzttr,
+                     'clusters_4' :self.ft_bclusters_4,
+                     'clusters_6' :self.ft_bclusters_6,
+                     'clusters_8' :self.ft_bclusters_8,
+                     'clusters_12' :self.ft_bclusters_12,
+                     'clusters_16' :self.ft_bclusters_16,
+                     'clusters_20' :self.ft_bclusters_20,
                      'contains_at': self.ft_contains_at,
                      'contains_digit': self.ft_contains_digit}
 
-        external_functs = {'per_gzttr', 'loc_gzttr', 'misc_gzttr', 'org_gzttr'}
+        external_functs = {'per_gzttr', 'loc_gzttr', 'misc_gzttr', 'org_gzttr', "clusters_8"}
         self.functions = []
         function = True
         for param in params:
