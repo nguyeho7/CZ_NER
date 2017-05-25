@@ -22,6 +22,8 @@ class feature_extractor:
     def __init__(self, params):
         self.function_dict = { 
                      'is_capitalised': self.ft_is_capitalised,
+                     'is_first': self.ft_is_first,
+                     'is_last': self.ft_is_last,
                      'suffix_2': self.ft_get_suffix_2,
                      'suffix_3': self.ft_get_suffix_3,
                      'prefix_2': self.ft_get_prefix_2,
@@ -68,6 +70,7 @@ class feature_extractor:
             curr_ft.update(self.ft_conll_get_prev_2(features,"label", "w[-2]", i))
             curr_ft.update(self.ft_conll_get_next_2(features,"label", "w[2]", i))
             curr_ft.update(self.ft_conll_conditional_prev_1(features, 'label', 'label', i))
+            curr_ft.update(self.ft_conll_conditional_next_1(features, 'label', 'label', i))
             # prev and next POS tag
             """
             curr_ft.update({"pos[0]" : fts['pos']})
@@ -76,11 +79,12 @@ class feature_extractor:
             curr_ft.update(self.ft_conll_get_prev_2(features,"pos", "pos[-2]", i))
             curr_ft.update(self.ft_conll_get_next_2(features,"pos", "pos[2]", i))
             curr_ft.update(self.ft_conll_conditional_prev_1(features, 'pos', 'pos', i))
-
+            curr_ft.update(self.ft_conll_conditional_next_1(features, 'pos', 'pos', i))
+            
             curr_ft.update({"chunk[0]" : fts['dep']})
             curr_ft.update(self.ft_conll_get_prev(features,"dep", "chunk[-1]", i))
             curr_ft.update(self.ft_conll_get_next(features,"dep", "chunk[1]", i))
-"""
+            """
             for ft_func in self.functions:
                 key, value = ft_func(features, "ft", token, i)
                 curr_ft.update({key: str(value)})
@@ -101,7 +105,7 @@ class feature_extractor:
 
     def ft_conll_get_next(self, features, feature, label, i):
         end = len(features)-1
-        if i < end - 1:
+        if i < end:
             return {label: features[i+1][feature]}
         else:
             return {label: "END"}
@@ -119,6 +123,13 @@ class feature_extractor:
             return {label: features[i+2][feature]}
         else:
             return {label: "END"}
+
+    def ft_conll_conditional_next_1(self, features, feature, label, i):
+        end = len(features)-1
+        if i < end :
+            return{"cond_n_"+feature : features[i+1][feature]+ "|"+features[i][feature]}
+        else:
+            return {"cond_n_"+feature : "END|"+features[i][feature]}
 
     def ft_conll_conditional_prev_1(self, features, feature, label, i):
         if i==0:
@@ -146,6 +157,14 @@ class feature_extractor:
         features, feature, token, i = params
         return "prefix_3",token[:3]
 
+    def ft_is_first(self, *params):
+        features, feature, token, i = params
+        return "first", i==0
+
+    def ft_is_last(self, *params):
+        features, feature, token, i = params
+        return "last", i==(len(features)-1)
+    
 
     def ft_contains_at(self, *params):
         features, feature, token, i = params
@@ -342,29 +361,30 @@ class feature_extractor:
 
     def ft_bclusters_4(self, *params):
         features, feature, token, i = params
-        return "BC_4", self.clusters[token.lower()][:4]
+        return "BC_4", self.clusters[token][:4]
 
     def ft_bclusters_6(self, *params):
         features, feature, token, i = params
-        return "BC_6", self.clusters[token.lower()][:6]
+        return "BC_6", self.clusters[token][:6]
 
     def ft_bclusters_8(self, *params, init=False):
         if init:
             self._load_clusters(params[0])
+            return
         features, feature, token, i = params
-        return "BC_8", self.clusters[token.lower()][:8]
+        return "BC_8", self.clusters[token][:8]
 
     def ft_bclusters_12(self, *params):
         features, feature, token, i = params
-        return "BC_12", self.clusters[token.lower()][:12]
+        return "BC_12", self.clusters[token][:12]
 
     def ft_bclusters_16(self, *params):
         features, feature, token, i = params
-        return "BC_16", self.clusters[token.lower()][:16]
+        return "BC_16", self.clusters[token][:16]
 
     def ft_bclusters_20(self, *params):
         features, feature, token, i = params
-        return "BC_20", self.clusters[token.lower()][:20]
+        return "BC_20", self.clusters[token][:20]
 
     def _load_clusters(self, filename):
         with open(filename) as f:
