@@ -1,7 +1,4 @@
 #!/usr/bin/env python3
-from src.common.NER_utils import transform_dataset 
-from src.common.NER_utils import dump_POS_tags
-from src.common.NER_utils import load_transform_dataset
 from src.common.NER_utils import transform_dataset_conll
 from src.common.eval import global_eval, output_evaluation, random_sample
 import argparse
@@ -40,33 +37,12 @@ def parse_args():
     parser.add_argument('merge', help='BIO|supertype|none')
     return parser.parse_args()
 
-def predict_and_eval(models, filename, merge):
-    for model, params in models:
-        tagger = pycrfsuite.Tagger()
-        tagger.open(model+".crfmodel")
-        labels, features, text = load_transform_dataset(filename, params, merge,str_format = True)
-        predictions = [tagger.tag(sentence) for sentence in features]
-
 def get_filenames(train_set):
     return train_set.split(' ')
 
-def train_and_eval(models, train_set, test_set, merge):
-    for model, params in models:
-        trainer = pycrfsuite.Trainer(verbose=True)
-        te_label, te_feature, text = load_transform_dataset(test_set, params, merge, str_format=False) 
-        for tr_set in get_filenames(train_set):
-            tr_label, tr_feature, _ = load_transform_dataset(tr_set, params, merge, str_format=False)
-            for lab, feat in zip(tr_label, tr_feature):
-                trainer.append(feat, lab)
-        trainer.train(model+'.crfmodel')
-        tagger = pycrfsuite.Tagger()
-        tagger.open(model+'.crfmodel')
-        predictions = [tagger.tag(sentence) for sentence in te_feature]
-        test_result = [[sent, pred] for sent, pred in zip(text, predictions)]
-        json.dump(test_result, open(model+"_textoutput.json", "w"))
 
 def train_and_eval_conll(train_set, test_set, filename="conllout.txt"):
-    model="conll2003basci"
+    model="conll2003basic"
     trainer = pycrfsuite.Trainer(verbose=True)
     te_label, te_feature, text = transform_dataset_conll(test_set) 
     tr_label, tr_feature, _ = transform_dataset_conll(train_set)
