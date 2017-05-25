@@ -8,7 +8,7 @@
     $(function() {
       $('a#annotate').bind('click', function() {
         $.getJSON('/annotate', {
-
+	  entities: $('textarea[id="entit"]').val(),
           sentence: $('input[name="sentence"]').val(),
          }, function(data) {
           $("#result").text(data.result);
@@ -21,16 +21,23 @@
   <body>
     <div class="container">
       <div class="header">
-        <h3 class="text-muted">Czech Named Entity Recognizer</h3>
+        <h3 class="text-muted">Named Entity Recognizer</h3>
       </div>
       <hr/>
       <div>
       <p>
     <input type="text" size="50" name="sentence">:
-    <span id="result">?</span>
+    <p>
+    <span id="result">?</span></p>
     <p><a href="javascript:void();" id="annotate">annotate</a>
       </form>
       </div>
+	<p> You can add entities to the gazetteers here </p>
+	<p>Add each entity on a separate line, together with its type </p>
+	<p>The supported types are: LOC, ORG, PER, MISC as per CoNLL2003 conventions </p>
+	<p><b>Example:</b></p>
+	<p>ORG Netflix</p>
+	<textarea id="entit" name="entities" cols="40" rows="10"></textarea>
     </div>
   </body>
 </html>

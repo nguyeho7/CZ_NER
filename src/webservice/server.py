@@ -31,16 +31,24 @@ def my_form():
 
 @app.route("/annotate", methods=['POST', 'GET'])
 def my_for_post():
-    text = request.args.get('sentence', 0, type=str)
+    external_data = defaultdict(set)
+    external_entities = request.args.get('entities', "", type=str)
+    print(external_entities)
+    if external_entities != "":
+        for line in external_entities.split('\n'):
+            tag, token = line.split(' ')
+            external_data[tag].add(token)
+    print(external_data)
+    text = request.args.get('sentence', "", type=str)
     sentence = []
     tokens = text.split(" ")
     for tok in tokens:
         sentence.append({"label": tok, "pos":"none", "dep": "none"})
-    features = ft.extract_features_sentence_conll(sentence, string_format=False)
+    features = ft.extract_features_sentence_conll(sentence, external_data, string_format=False)
     print(features)
     predictions = tagger.tag(features)
     output = " ".join(wrap_text(tag, token) for tag, token in zip(predictions, tokens))
     return jsonify(result=output)
 if __name__ == "__main__":
-    app.run()
+    app.run(host="0.0.0.0", port=80)
  
