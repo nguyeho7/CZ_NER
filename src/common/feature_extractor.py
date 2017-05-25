@@ -62,14 +62,14 @@ class feature_extractor:
             curr_ft.update(self.ft_conll_get_next(features,"label", "w[1]", i))
             curr_ft.update(self.ft_conll_get_prev_2(features,"label", "w[-2]", i))
             curr_ft.update(self.ft_conll_get_next_2(features,"label", "w[2]", i))
-            curr_ft.update(self.ft_conll_conditional_prev_1(features, 'label', 'label', i)
+            curr_ft.update(self.ft_conll_conditional_prev_1(features, 'label', 'label', i))
             # prev and next POS tag
             curr_ft.update({"pos[0]" : fts['pos']})
             curr_ft.update(self.ft_conll_get_prev(features,"pos", "pos[-1]", i))
             curr_ft.update(self.ft_conll_get_next(features,"pos", "pos[1]", i))
             curr_ft.update(self.ft_conll_get_prev_2(features,"pos", "pos[-2]", i))
             curr_ft.update(self.ft_conll_get_next_2(features,"pos", "pos[2]", i))
-            curr_ft.update(self.ft_conll_conditional_prev_1(features, 'pos', 'pos', i)
+            curr_ft.update(self.ft_conll_conditional_prev_1(features, 'pos', 'pos', i))
 
             curr_ft.update({"chunk[0]" : fts['dep']})
             curr_ft.update(self.ft_conll_get_prev(features,"dep", "chunk[-1]", i))
