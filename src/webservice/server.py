@@ -1,10 +1,9 @@
 from flask import Flask
 from flask import request, render_template, jsonify
-from src.common.NER_utils import transform_dataset_web 
 from src.CRF_NER.CRF_NER import parse_commands
 import pycrfsuite
-
-model = "1_nbr"
+from src.common.feature_extractor import *
+model = "conll2003nopos"
 
 def init(filename = "model.txt"):
     with open(filename) as f:
@@ -15,8 +14,12 @@ def init(filename = "model.txt"):
         return label, params
 
 _, params = init()
-
+ft = feature_extractor(["get_type", "is_capitalised", "contains_at", "contains_digit",
+        "suffix_2", "suffix_3", "prefix_2", "prefix_3", "get_type", "per_gzttr", "eng_PER", "loc_gzttr", "eng_LOC",
+        "org_gzttr", "eng_ORG", "misc_gzttr", "eng_MISC"])
 app = Flask(__name__)
+tagger = pycrfsuite.Tagger()
+tagger.open(model+".crfmodel")
 def wrap_text(tag, token):
     if tag == "O":
         return token
@@ -29,13 +32,13 @@ def my_form():
 @app.route("/annotate", methods=['POST', 'GET'])
 def my_for_post():
     text = request.args.get('sentence', 0, type=str)
-    tagger = pycrfsuite.Tagger()
-    tagger.open(model+".crfmodel")
-    features, tokens = transform_dataset_web(text, params, merge = "supertype")
+    sentence = []
+    tokens = text.split(" ")
+    for tok in tokens:
+        sentence.append({"label": tok, "pos":"none", "dep": "none"})
+    features = ft.extract_features_sentence_conll(sentence, string_format=False)
     print(features)
     predictions = tagger.tag(features)
-    print(predictions)
-    tagger.close()
     output = " ".join(wrap_text(tag, token) for tag, token in zip(predictions, tokens))
     return jsonify(result=output)
 if __name__ == "__main__":

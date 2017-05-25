@@ -20,15 +20,12 @@ class feature_extractor:
     '''
 
     def __init__(self, params):
-        self.function_dict = {'label' : self.ft_get_label, 
-                     'to_lower': self.ft_to_lower,
+        self.function_dict = { 
                      'is_capitalised': self.ft_is_capitalised,
-                     'POS_cond': self.ft_POS_cond,
                      'suffix_2': self.ft_get_suffix_2,
                      'suffix_3': self.ft_get_suffix_3,
                      'prefix_2': self.ft_get_prefix_2,
                      'prefix_3': self.ft_get_prefix_3,
-                     'conditional_prev_1': self.ft_conditional_prev_1,
                      'get_type': self.ft_get_type,
                      'per_gzttr' : self.ft_per_gzttr,
                      'loc_gzttr' : self.ft_loc_gzttr,
@@ -64,6 +61,7 @@ class feature_extractor:
             curr_ft.update(self.ft_conll_get_next_2(features,"label", "w[2]", i))
             curr_ft.update(self.ft_conll_conditional_prev_1(features, 'label', 'label', i))
             # prev and next POS tag
+            """
             curr_ft.update({"pos[0]" : fts['pos']})
             curr_ft.update(self.ft_conll_get_prev(features,"pos", "pos[-1]", i))
             curr_ft.update(self.ft_conll_get_next(features,"pos", "pos[1]", i))
@@ -74,7 +72,7 @@ class feature_extractor:
             curr_ft.update({"chunk[0]" : fts['dep']})
             curr_ft.update(self.ft_conll_get_prev(features,"dep", "chunk[-1]", i))
             curr_ft.update(self.ft_conll_get_next(features,"dep", "chunk[1]", i))
-
+"""
             for ft_func in self.functions:
                 key, value = ft_func(features, "ft", token, i)
                 curr_ft.update({key: str(value)})
@@ -114,7 +112,6 @@ class feature_extractor:
             return {label: "END"}
 
     def ft_conll_conditional_prev_1(self, features, feature, label, i):
-        token, i, tokens = params
         if i==0:
             return {"cond_"+feature : features[i][feature]+ "|START"}
         else:
@@ -199,7 +196,7 @@ class feature_extractor:
                 l = l.strip()
                 tokens = l.split(' ')
                 if len(tokens) == 2:
-                    self_loc_gzttr_1word.add(tokens[1])
+                    self.loc_gzttr_1word.add(tokens[1])
                 else:
                     for i in range(3, len(tokens)):
                         subtoken = tokens[i]
@@ -238,7 +235,7 @@ class feature_extractor:
                 l = l.strip()
                 tokens = l.split(' ')
                 if len(tokens) == 2:
-                    self_misc_gzttr_1word.add(tokens[1])
+                    self.misc_gzttr_1word.add(tokens[1])
                 else:
                     for i in range(3, len(tokens)):
                         subtoken = tokens[i]
@@ -278,7 +275,7 @@ class feature_extractor:
                 l = l.strip()
                 tokens = l.split(' ')
                 if len(tokens) == 2:
-                    self_per_gzttr_1word.add(tokens[1])
+                    self.per_gzttr_1word.add(tokens[1])
                 else:
                     for i in range(3, len(tokens)):
                         subtoken = tokens[i]
@@ -318,7 +315,7 @@ class feature_extractor:
                 l = l.strip()
                 tokens = l.split(' ')
                 if len(tokens) == 2:
-                    self_org_gzttr_1word.add(tokens[1])
+                    self.org_gzttr_1word.add(tokens[1])
                 else:
                     for i in range(3, len(tokens)):
                         subtoken = tokens[i]
