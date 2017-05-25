@@ -333,3 +333,34 @@ class feature_extractor:
                         self.org_gzttr_after[subtoken_prev].add(subtoken)
                         self.org_gzttr_before[subtoken].add(subtoken_prev)
 
+    def ft_bclusters_4(self, *params):
+        features, feature, token, i = params
+        return "BC_4", self.clusters[token.lower()][:4]
+
+    def ft_bclusters_6(self, *params):
+        features, feature, token, i = params
+        return "BC_6", self.clusters[token.lower()][:6]
+
+    def ft_bclusters_8(self, *params, init=False):
+        if init:
+            self._load_clusters(params[0])
+        features, feature, token, i = params
+        return "BC_8", self.clusters[token.lower()][:8]
+
+    def ft_bclusters_12(self, *params):
+        features, feature, token, i = params
+        return "BC_12", self.clusters[token.lower()][:12]
+
+    def ft_bclusters_16(self, *params):
+        features, feature, token, i = params
+        return "BC_16", self.clusters[token.lower()][:16]
+
+    def ft_bclusters_20(self, *params):
+        features, feature, token, i = params
+        return "BC_20", self.clusters[token.lower()][:20]
+
+    def _load_clusters(self, filename):
+        with open(filename) as f:
+            for l in f:
+                l_split = l.split('\t')
+                self.clusters.update({l_split[1] : l_split[0]})
