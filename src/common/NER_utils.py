@@ -24,7 +24,8 @@ def transform_dataset_conll(dataset_name):
     current_sentence_features = []
     ft = feature_extractor(["get_type", "is_capitalised", "contains_at", "contains_digit",
         "suffix_2", "suffix_3", "prefix_2", "prefix_3", "get_type", "per_gzttr", "eng_PER", "loc_gzttr", "eng_LOC",
-        "org_gzttr", "eng_ORG", "misc_gzttr", "eng_MISC"])
+        "org_gzttr", "eng_ORG", "misc_gzttr", "eng_MISC", "clusters_8", "rcv1.64M-c2560-p1.paths",
+        "clusters_6", "clusters_12", "clusters_16", "clusters_20"])
     for line in dataset:
         line = line.strip()
         if line.startswith("-DOCSTART-"):
